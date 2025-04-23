@@ -10,7 +10,7 @@ import Container from "../components/Container";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 
-function ratethaiPage() {
+function RatethaiPage() {
   const { data: session } = useSession();
   if (!session) redirect("/login");
   console.log(session);
@@ -146,4 +146,4 @@ function ratethaiPage() {
   );
 }
 
-export default ratethaiPage;
+export default RatethaiPage;
