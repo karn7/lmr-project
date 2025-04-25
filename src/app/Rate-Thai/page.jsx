@@ -98,7 +98,7 @@ function RatethaiPage() {
                                   {isFirstOfGroup ? (
                                     <div className="flex items-center gap-2">
                                       <img
-                                        src={`/cur/${val.title}.png`}
+                                        src={`/cur/${val.title.toUpperCase()}.png`}
                                         alt={val.title}
                                         className="w-8 h-5 object-cover border rounded"
                                       />
