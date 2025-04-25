@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation'
 function EditPage({ params }) {
 
     const { data: session } = useSession();
-    if (!session) redirect("/login");
+    if (!session) redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`);
 
     const { id } = params;
     console.log(id)
@@ -31,7 +31,7 @@ function EditPage({ params }) {
 
     const getPostById = async (id) => {
         try {
-            const res = await fetch(`/api/posts/${id}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/posts/${id}`, {
                 method: "GET",
                 cache: "no-store"
             })
@@ -65,7 +65,7 @@ function EditPage({ params }) {
         const updatedSellLaos = newSellLaos || postData.post?.selllaos;
       
         try {
-          const res = await fetch(`/api/posts/${id}`, {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/posts/${id}`, {
             method: "PUT",
             headers: {
               "Content-Type": "application/json"
@@ -85,7 +85,7 @@ function EditPage({ params }) {
           }
       
           router.refresh();
-          router.push("/Rate-Thai");
+          router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/Rate-Thai`);
       
         } catch (error) {
           console.log(error);

@@ -23,9 +23,9 @@ function WelcomePage() {
 
   useEffect(() => {
     if (!session) {
-      redirect("/login");
+      redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`);
     } else if (session?.user?.role === "admin") {
-      redirect("/admin");
+      redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin`);
     }
   }, [session]);
 
@@ -47,7 +47,7 @@ function WelcomePage() {
 
   const getPosts = async () => {
     try {
-      const res = await fetch("/api/posts", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/posts`, {
         cache: "no-store",
       });
   
@@ -72,7 +72,7 @@ function WelcomePage() {
     console.log("🕐 ShiftNo ขณะนี้:", currentShift?.shiftNo);
     try {
       const date = new Date().toISOString().split("T")[0];
-      const res = await fetch(`/api/cashdrawer?user=${session.user.name}&date=${date}&shiftNo=${currentShift.shiftNo}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/cashdrawer?user=${session.user.name}&date=${date}&shiftNo=${currentShift.shiftNo}`);
       const data = await res.json();
       setEntries(data.entries || []);
       console.log("✅ ตรวจสอบข้อมูลที่โหลดได้:", data.entries);
@@ -86,7 +86,7 @@ function WelcomePage() {
     const fetchCurrentShift = async () => {
       try {
         const today = new Date().toISOString().slice(0, 10);
-        const resCheck = await fetch(`/api/open-shift/check?employee=${session?.user?.name}`);
+        const resCheck = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/check?employee=${session?.user?.name}`);
         const dataCheck = await resCheck.json();
 
         if (!dataCheck.shiftNo) {
@@ -116,7 +116,7 @@ function WelcomePage() {
 
   const handleSubmit = async () => {
     try {
-      const res = await fetch("/api/cashdrawer", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/cashdrawer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -153,7 +153,7 @@ function WelcomePage() {
         updatePayload.amount = Number(amount);
       }
 
-      await fetch("/api/open-shift/update-cash", {
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/update-cash`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatePayload),

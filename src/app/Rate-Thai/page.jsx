@@ -12,16 +12,16 @@ import { redirect } from "next/navigation";
 
 function RatethaiPage() {
   const { data: session } = useSession();
-  if (!session) redirect("/login");
+  if (!session) redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`);
   console.log(session);
 
-  if (session?.user?.role === "admin") redirect("/admin/rateadmin");
+  if (session?.user?.role === "admin") redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/rateadmin`);
 
   const [postData, setPostData] = useState([]);
 
   const getPosts = async () => {
     try {
-      const res = await fetch("/api/posts", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/posts`, {
         cache: "no-store",
       });
 
@@ -119,7 +119,7 @@ function RatethaiPage() {
                                 </td>
                                 <td className="py-2 px-4 border-b space-x-2">
                                   <Link
-                                    href={`/edit/${val._id}`}
+                                    href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/edit/${val._id}`}
                                     className="bg-gray-500 text-white py-1 px-2 rounded-md text-sm"
                                   >
                                     Edit

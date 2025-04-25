@@ -13,7 +13,7 @@ import UserSideNav from '../admin/components/SideNav'
 function CreatePage() {
   
     const { data: session } = useSession();
-    if (!session) redirect("/login");
+    if (!session) redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`);
 
     const userEmail = session?.user?.email;
 
@@ -44,7 +44,7 @@ function CreatePage() {
 
         try {
 
-            const res = await fetch("/api/posts", {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/posts`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -60,7 +60,7 @@ function CreatePage() {
             })
 
             if (res.ok) {
-                router.push("/admin/rateadmin");
+                router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/rateadmin`);
             } else {
                 throw new Error("Failed to create a post");
             }
@@ -78,7 +78,7 @@ function CreatePage() {
                 <div className='flex gap-8 items-start'>
                         <UserSideNav />
                     <div className='w-3/4 bg-white shadow-md rounded-lg p-5'>
-                        <Link href="/admin/rateadmin" className='bg-gray-500 inline-block text-white border py-2 px-3 rounded my-2'>Go back</Link>
+                        <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/rateadmin`} className='bg-gray-500 inline-block text-white border py-2 px-3 rounded my-2'>Go back</Link>
                         <hr className='my-3' />
                         <h3 className='text-xl'>Create Rate</h3>
                         <form onSubmit={handleSubmit}>

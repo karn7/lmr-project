@@ -8,7 +8,7 @@ function DeleteBtn({ id }) {
         const confirmed = confirm("Are you sure?");
 
         if (confirmed) {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/totalposts?id=${id}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/totalposts?id=${id}`, {
                 method: "DELETE"
             })
 

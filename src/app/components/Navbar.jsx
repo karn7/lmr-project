@@ -12,15 +12,15 @@ function Navbar({ session }) {
         <div className='container mx-auto'>
             <div className='flex justify-between items-center p-4'>
                 <div>
-                    <Link href="/">
+                    <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/`}>
                         <Image src={Logo} width={100} height={100} alt='LMR Logo' />
                     </Link>
                 </div>
                 <ul className='flex'>
                     {!session ? (
                         <>
-                            <li className='mx-3'><Link href="/login">Login</Link></li>
-                            <li className='mx-3'><Link href="/register">Register</Link></li>
+                            <li className='mx-3'><Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`}>Login</Link></li>
+                            <li className='mx-3'><Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/register`}>Register</Link></li>
                         </>
                     ) : (
                       <li className="mx-3">

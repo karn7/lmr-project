@@ -9,7 +9,7 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch(`/api/record/${docNumber}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/record/${docNumber}`);
         if (!res.ok) throw new Error("Failed to fetch record");
         const data = await res.json();
         setRecord(data.record);
@@ -20,7 +20,7 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
         }, 500);
       } catch (err) {
         console.error(err);
-        router.push("/error");
+        router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/error`);
       }
     };
 

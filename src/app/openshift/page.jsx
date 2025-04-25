@@ -22,7 +22,7 @@ export default function OpenShiftPage() {
   useEffect(() => {
     const checkOpenShift = async () => {
       try {
-        const res = await fetch("/api/open-shift/check");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/check`);
         const data = await res.json();
         if (data.open) {
           setIsOpen(true);
@@ -40,7 +40,7 @@ export default function OpenShiftPage() {
   useEffect(() => {
     if (isOpen) return;
     const fetchCurrencies = async () => {
-      const res = await fetch("/api/posts");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/posts`);
       const data = await res.json();
       const unique = [...new Set(data.posts.map((p) => p.title))];
       setCurrencies(unique);
@@ -54,7 +54,7 @@ export default function OpenShiftPage() {
   useEffect(() => {
     const fetchShiftCount = async () => {
       try {
-        const res = await fetch(`/api/open-shift/count?date=${today}&employee=${session?.user?.name}&branch=${session?.user?.branch}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/count?date=${today}&employee=${session?.user?.name}&branch=${session?.user?.branch}`);
         const data = await res.json();
         setShiftNo(data.count + 1);
       } catch (err) {
@@ -74,7 +74,7 @@ export default function OpenShiftPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/open-shift", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -91,7 +91,7 @@ export default function OpenShiftPage() {
       if (!res.ok) throw new Error("Failed to open shift");
 
       setMessage("เปิดร้านสำเร็จ");
-      setTimeout(() => router.push("/"), 2000);
+      setTimeout(() => router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/`), 2000);
     } catch (err) {
       setMessage("เกิดข้อผิดพลาด");
     } finally {

@@ -15,9 +15,9 @@ function WelcomePage() {
 
   useEffect(() => {
     if (!session) {
-      redirect("/login");
+      redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`);
     } else if (session?.user?.role === "admin") {
-      redirect("/admin");
+      redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin`);
     }
   }, [session]);
 
@@ -52,7 +52,7 @@ function WelcomePage() {
 
   const getPosts = async () => {
     try {
-      const res = await fetch(`/api/posts`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/posts`, {
         cache: "no-store",
       });
 

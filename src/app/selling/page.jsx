@@ -33,7 +33,7 @@ function ExchangePage() {
 
   useEffect(() => {
       const fetchCurrencies = async () => {
-        const res = await fetch("/api/posts");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/posts`);
         const data = await res.json();
         const filtered = data.posts.filter((c) => c.title !== "THB");
         setCurrencies(filtered);
@@ -44,7 +44,7 @@ function ExchangePage() {
 
   useEffect(() => {
     const fetchShift = async () => {
-      const res = await fetch(`/api/open-shift/check?employee=${session?.user?.name}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/check?employee=${session?.user?.name}`);
       const data = await res.json();
       if (data?.open && data?.shiftNo) {
         setCurrentShift(data);
@@ -124,7 +124,7 @@ function ExchangePage() {
     if (!confirmSave) return;
 
     try {
-      const res = await fetch("/api/record", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/record`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -157,7 +157,7 @@ function ExchangePage() {
           action: "increase", 
         };
         console.log("📤 ส่งข้อมูล update-cash สำหรับ THB:", payloadTHB);
-        await fetch("/api/open-shift/update-cash", {
+        await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/update-cash`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payloadTHB),
@@ -173,7 +173,7 @@ function ExchangePage() {
             action: "decrease", 
           };
           console.log("📤 ส่งข้อมูล update-cash:", payload);
-          await fetch("/api/open-shift/update-cash", {
+          await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/update-cash`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
@@ -182,7 +182,7 @@ function ExchangePage() {
 
         const total = totalSum.toFixed(2);
         window.open(
-          `/printreceipt?docNumber=${docNumber}&total=${total}`,
+          `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/printreceipt?docNumber=${docNumber}&total=${total}`,
           "_blank",
           "width=500,height=400"
         );
@@ -198,7 +198,7 @@ function ExchangePage() {
     <div className="bg-orange-500 min-h-screen p-4 text-black">
       <div className="flex justify-between items-start">
         <Link
-          href="/welcome"
+          href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/welcome`}
           className="bg-gray-500 inline-block text-white border py-2 px-3 rounded my-2"
         >
           กลับ
@@ -363,7 +363,7 @@ function ExchangePage() {
               style={{ padding: 0, width: "76px", height: "46px" }}
             >
               <img
-                src={`/cur/${currency.title}.png`}
+                src={`/cur/${currency.title.toUpperCase()}.png`}
                 alt={currency.title}
                 className="w-full h-full object-cover"
               />

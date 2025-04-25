@@ -13,16 +13,16 @@ import DeleteBtn from "./DeleteBtn";
 
 function RatethaiPage() {
   const { data: session } = useSession();
-  if (!session) redirect("/login");
+  if (!session) redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`);
   console.log(session);
 
-  if (session?.user?.role !== "admin") redirect("/");
+  if (session?.user?.role !== "admin") redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/`);
 
   const [postData, setPostData] = useState([]);
 
   const getPosts = async () => {
     try {
-      const res = await fetch("/api/posts", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/posts`, {
         cache: "no-store",
       });
 
@@ -69,7 +69,7 @@ function RatethaiPage() {
                 <div></div>
                 <div>
                   <Link
-                    href="/create"
+                    href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/create`}
                     className="bg-green-500 text-white py-2 px-3 rounded-md text-lg hover:bg-green-600"
                   >
                     สร้างรายการใหม่
@@ -105,7 +105,7 @@ function RatethaiPage() {
                                   {isFirstOfGroup ? (
                                     <div className="flex items-center gap-2">
                                       <img
-                                        src={`/cur/${val.title}.png`}
+                                        src={`/cur/${val.title.toUpperCase()}.png`}
                                         alt={val.title}
                                         className="w-8 h-5 object-cover border rounded"
                                       />
@@ -132,7 +132,7 @@ function RatethaiPage() {
                                 </td>
                                 <td className="py-2 px-4 border-b space-x-2">
                                   <Link
-                                    href={`/admin/editrate/${val._id}`}
+                                    href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/editrate/${val._id}`}
                                     className="bg-gray-500 text-white py-1 px-2 rounded-md text-sm"
                                   >
                                     Edit

@@ -19,7 +19,7 @@ function LoginPage() {
     const router = useRouter();
 
     const { data: session } = useSession();
-    if (session) router.replace("/")
+    if (session) router.replace(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/`)
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -35,7 +35,7 @@ function LoginPage() {
                 return;
             }
 
-            router.replace("/");
+            router.replace(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/`);
 
         } catch(error) {
             console.log(error);

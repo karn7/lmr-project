@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation'
 function EditPage({ params }) {
 
     const { data: session } = useSession();
-    if (!session) redirect("/login");
+    if (!session) redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`);
 
     const { id } = params;
     console.log(id)
@@ -29,7 +29,7 @@ function EditPage({ params }) {
 
     const getPostById = async (id) => {
         try {
-            const res = await fetch(`/api/posts/${id}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/posts/${id}`, {
                 method: "GET",
                 cache: "no-store"
             })
@@ -61,7 +61,7 @@ function EditPage({ params }) {
         const updatedSell = newSell || postData.post?.sell;
       
         try {
-          const res = await fetch(`/api/posts/${id}`, {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/posts/${id}`, {
             method: "PUT",
             headers: {
               "Content-Type": "application/json"
@@ -79,7 +79,7 @@ function EditPage({ params }) {
           }
       
           router.refresh();
-          router.push("/Rate-Thai");
+          router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/Rate-Thai`);
       
         } catch (error) {
           console.log(error);
@@ -91,7 +91,7 @@ function EditPage({ params }) {
         <Navbar />
             <div className='flex-grow'>
                 <div className='container mx-auto shadow-xl my-10 p-10 rounded-xl'>
-                    <Link href="/Rate-Thai" className='bg-gray-500 inline-block text-white border py-2 px-3 rounded my-2'>กลับ</Link>
+                    <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/Rate-Thai`} className='bg-gray-500 inline-block text-white border py-2 px-3 rounded my-2'>กลับ</Link>
                     <hr className='my-3' />
                     <h3 className='text-xl'>แก้ไขอัตราแลกเปลี่ยน</h3>
                     <form onSubmit={handleSubmit}>

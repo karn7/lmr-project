@@ -25,7 +25,7 @@ function AdminPage() {
 
     const refreshBalances = async () => {
       try {
-        const res = await fetch("/api/open-shift/all-balances");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/all-balances`);
         const data = await res.json();
 
         const balances = data.branchBalances || [];
@@ -48,9 +48,9 @@ function AdminPage() {
 
     useEffect(() => {
       if (!session) {
-        redirect("/login");
+        redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`);
       } else if (session?.user?.role !== "admin") {
-        redirect("/welcome");
+        redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/welcome`);
       } else if (session?.user?.lastLoginDate) {
         const last = new Date(session.user.lastLoginDate);
         const now = new Date();

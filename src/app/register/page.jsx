@@ -1,12 +1,12 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import Container from '../components/Container'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import { redirect } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 
 function RegisterPage() {
 
@@ -21,7 +21,14 @@ function RegisterPage() {
     const [success, setSuccess] = useState("");
 
     const { data: session } = useSession();
-    if (session) redirect("/welcome");
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!session) return;
+        if (!session.user || session.user.role !== "admin") {
+            router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/`);
+        }
+    }, [session]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -38,7 +45,7 @@ function RegisterPage() {
 
         try {
 
-            const resUserExists = await fetch("/api/userExists", {
+            const resUserExists = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/userExists`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -53,13 +60,13 @@ function RegisterPage() {
                 return;
             }
 
-            const res = await fetch("/api/register", {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/register`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    name, email, password, role,country , branch
+                    name, email, password, role, country, branch
                 })
             })
 

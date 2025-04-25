@@ -12,8 +12,8 @@ import { useRouter } from 'next/navigation'
 function AdminEditPostPage({ params }) {
     
     const { data: session } = useSession();
-    if (!session) redirect("/login");
-    if (!session?.user?.role === "admin") redirect("/welcome");
+    if (!session) redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`);
+    if (!session?.user?.role === "admin") redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/welcome`);
 
     const { id } = params;
 
@@ -69,7 +69,7 @@ function AdminEditPostPage({ params }) {
             }
 
             router.refresh();
-            router.push("/admin/posts");
+            router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/posts`);
 
         } catch(error) {
             console.log(error);
@@ -81,7 +81,7 @@ function AdminEditPostPage({ params }) {
         <AdminNav session={session} />
             <div className='flex-grow'>
                 <div className='container mx-auto shadow-xl my-10 p-10 rounded-xl'>
-                    <Link href="/admin/posts" className='bg-gray-500 inline-block text-white border py-2 px-3 rounded my-2'>Go back</Link>
+                    <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/posts`} className='bg-gray-500 inline-block text-white border py-2 px-3 rounded my-2'>Go back</Link>
                     <hr className='my-3' />
                     <h3 className='text-xl'>Admin Edit User Post Page</h3>
                     <form onSubmit={handleSubmit}>

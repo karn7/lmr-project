@@ -7,7 +7,7 @@ function RateDisplayPage() {
 
   const getPosts = async () => {
     try {
-      const res = await fetch("/api/posts", { cache: "no-store" });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/posts`, { cache: "no-store" });
       if (!res.ok) {
         throw new Error("Failed to fetch posts.");
       }
@@ -58,7 +58,7 @@ function RateDisplayPage() {
                     {isFirstOfGroup ? (
                       <div className="flex items-center gap-2">
                         <img
-                          src={`/cur/${val.title}.png`}
+                          src={`/cur/${val.title.toUpperCase()}.png`}
                           alt={val.title}
                           className="w-10 h-6 object-cover border rounded"
                         />

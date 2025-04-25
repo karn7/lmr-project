@@ -14,10 +14,10 @@ import { format } from "date-fns";
 
 function WelcomePage() {
   const { data: session } = useSession();
-  if (!session) redirect("/login");
+  if (!session) redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`);
   console.log(session);
 
-  if (session?.user?.role === "admin") redirect("/admin");
+  if (session?.user?.role === "admin") redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin`);
 
   const [postData, setPostData] = useState([]);
   const [records, setRecords] = useState([]);
@@ -26,7 +26,7 @@ function WelcomePage() {
 
   const getPosts = async () => {
     try {
-      const res = await fetch(`/api/posts?email=${userEmail}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/posts?email=${userEmail}`, {
         cache: "no-store",
       });
 
@@ -43,7 +43,7 @@ function WelcomePage() {
 
   const getRecords = async () => {
     try {
-      const res = await fetch(`/api/record`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/record`);
       const data = await res.json();
       const today = new Date().toISOString().slice(0, 10);
       const todayRecords = data.records.filter((r) => {
@@ -75,31 +75,31 @@ function WelcomePage() {
               <div className="flex justify-between items-start"></div>
 
               <div className="flex gap-4 mb-6">
-                <Link href="/buying">
+                <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/buying`}>
                   <button className="bg-green-500 text-white py-2 px-3 rounded-md text-lg hover:bg-green-600">
                     Buy
                   </button>
                 </Link>
 
-                <Link href="/selling">
+                <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/selling`}>
                   <button className="bg-green-500 text-white py-2 px-3 rounded-md text-lg hover:bg-green-600">
                     Sell
                   </button>
                 </Link>
 
-                <Link href="/wechat">
+                <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/wechat`}>
                   <button className="bg-blue-500 text-white py-2 px-3 rounded-md text-lg hover:bg-blue-600">
                     Wechat
                   </button>
                 </Link>
 
-                <Link href="withdraw">
+                <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/withdraw`}>
                   <button className="bg-blue-500 text-white py-2 px-3 rounded-md text-lg hover:bg-blue-600">
                   Withdraw
                   </button>
                 </Link>
 
-                <Link href="lot">
+                <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/lot`}>
                   <button className="bg-purple-500 text-white py-2 px-3 rounded-md text-lg hover:bg-purple-600">
                     Lot
                   </button>
@@ -136,7 +136,7 @@ function WelcomePage() {
                         <button
                           onClick={() =>
                             window.open(
-                              `/printreceipt?docNumber=${record.docNumber}&total=${record.total}`,
+                              `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/printreceipt?docNumber=${record.docNumber}&total=${record.total}`,
                               "_blank", "width=500,height=400"
                             )
                           }

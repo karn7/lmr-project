@@ -18,7 +18,7 @@ export default function CloseShiftPage() {
   useEffect(() => {
     const fetchShift = async () => {
       try {
-        const res = await fetch(`/api/open-shift/check?employee=${session?.user?.name}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/check?employee=${session?.user?.name}`);
         const data = await res.json();
         if (data.open) {
           if (data.cashBalance) {
@@ -59,7 +59,7 @@ export default function CloseShiftPage() {
   const confirmCloseShift = async () => {
     try {
       const today = new Date().toISOString().slice(0, 10);
-      const resCheck = await fetch(`/api/open-shift/check?employee=${session?.user?.name}`);
+      const resCheck = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/check?employee=${session?.user?.name}`);
       const dataCheck = await resCheck.json();
 
       if (!dataCheck.shiftNo) {
@@ -67,7 +67,7 @@ export default function CloseShiftPage() {
         return;
       }
 
-      const res = await fetch("/api/closeshift", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/closeshift`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -203,7 +203,7 @@ export default function CloseShiftPage() {
               <button
                 onClick={() => {
                   setSummary(null);
-                  router.push("/");
+                  router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/`);
                 }}
                 className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
               >

@@ -10,15 +10,15 @@ export default function Home() {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/login");
+      router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`);
     } else if (status === "authenticated") {
       if (session?.user?.role === "admin") {
-        router.push("/admin");
+        router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin`);
       } else {
         if (session?.user?.country === "Thai") {
-          router.push("/mainthai");
+          router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/mainthai`);
         } else if (session?.user?.country === "laos") {
-          router.push("/mainlaos");
+          router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/mainlaos`);
         }
       }
     }

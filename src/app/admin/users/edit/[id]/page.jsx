@@ -13,8 +13,8 @@ import { useRouter } from 'next/navigation'
 function AdminEditUserPage({ params }) {
 
     const { data: session } = useSession();
-    if (!session) redirect("/login");
-    if (!session?.user?.role === "admin") redirect("/welcome");
+    if (!session) redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`);
+    if (!session?.user?.role === "admin") redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/welcome`);
 
     const { id } = params;
 
@@ -31,7 +31,7 @@ function AdminEditUserPage({ params }) {
 
     const getUserById = async (id) => {
         try {
-            const res = await fetch(`/api/totalusers/${id}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/totalusers/${id}`, {
                 method: "GET",
                 cache: "no-store"
             })
@@ -57,7 +57,7 @@ function AdminEditUserPage({ params }) {
 
         try {
              
-            const res = await fetch(`/api/totalusers/${id}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/totalusers/${id}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json"
@@ -76,7 +76,7 @@ function AdminEditUserPage({ params }) {
             }
 
             router.refresh();
-            router.push("/admin/users");
+            router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/users`);
 
         } catch(error) {
             console.log(error);
@@ -88,7 +88,7 @@ function AdminEditUserPage({ params }) {
         <AdminNav session={session} />
             <div className='flex-grow'>
                 <div className='container mx-auto shadow-xl my-10 p-10 rounded-xl'>
-                    <Link href="/admin/users" className='bg-gray-500 inline-block text-white border py-2 px-3 rounded my-2'>Go back</Link>
+                    <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/users`} className='bg-gray-500 inline-block text-white border py-2 px-3 rounded my-2'>Go back</Link>
                     <hr className='my-3' />
                     <h3 className='text-xl'>Admin Edit User Page</h3>
                     <form onSubmit={handleSubmit}>

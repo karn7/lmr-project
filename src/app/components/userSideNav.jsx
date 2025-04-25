@@ -10,7 +10,7 @@ function SideNav() {
   useEffect(() => {
     const checkOpenShift = async () => {
       try {
-    const res = await fetch(`/api/open-shift/check?employee=${session?.user?.name}`);
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/check?employee=${session?.user?.name}`);
         const data = await res.json();
         console.log("Shift open status:", data.open); // Debug log
         setShiftData(data);
@@ -35,7 +35,7 @@ function SideNav() {
       <ul>
         {isOpen === false && (
           <li>
-            <Link className='block my-3 p-3 rounded-lg bg-green-500 text-white text-center' href="/openshift">
+            <Link className='block my-3 p-3 rounded-lg bg-green-500 text-white text-center' href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/openshift`}>
               Open Store
             </Link>
           </li>
@@ -43,27 +43,27 @@ function SideNav() {
         <li>
           <Link
             className={`block my-3 p-3 rounded-lg ${isOpen ? '' : 'bg-gray-300 cursor-not-allowed pointer-events-none'}`}
-            href={isOpen ? "/welcome" : "#"}
+            href={isOpen ? `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/welcome` : "#"}
           >
             Exchange
           </Link>
         </li>
         <li>
-          <Link className='block my-3 p-3 rounded-lg' href="/Rate-Thai">
+          <Link className='block my-3 p-3 rounded-lg' href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/Rate-Thai`}>
             Rate
           </Link>
         </li>
         <li>
           <Link
             className={`block my-3 p-3 rounded-lg ${isOpen ? '' : 'bg-gray-300 cursor-not-allowed pointer-events-none'}`}
-            href={isOpen ? "/cashdrawer" : "#"}
+            href={isOpen ? `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/cashdrawer` : "#"}
           >
             Cash Drawer
           </Link>
         </li>
         <li>
           <a
-            href="/rate-display"
+            href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/rate-display`}
             target="_blank"
             rel="noopener noreferrer"
             className="block my-3 p-3 rounded-lg"
@@ -73,7 +73,7 @@ function SideNav() {
         </li>
         {isOpen === true && (
           <li>
-            <Link className='block my-3 p-3 rounded-lg bg-red-500 text-white text-center' href="/closeshift">
+            <Link className='block my-3 p-3 rounded-lg bg-red-500 text-white text-center' href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/closeshift`}>
               Close Store
             </Link>
           </li>

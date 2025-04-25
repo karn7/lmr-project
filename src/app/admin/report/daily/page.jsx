@@ -24,7 +24,7 @@ function ReportPage() {
     
     useEffect(() => {
         // fetch records
-        fetch("/api/record")
+        fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/record`)
           .then((res) => res.json())
           .then((data) => {
             setRecords(data.records);
@@ -54,9 +54,9 @@ function ReportPage() {
     
     useEffect(() => {
       if (!session) {
-        redirect("/login");
+        redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`);
       } else if (session?.user?.role !== "admin") {
-        redirect("/welcome");
+        redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/welcome`);
       } else if (session?.user?.lastLoginDate) {
         const last = new Date(session.user.lastLoginDate);
         const now = new Date();
@@ -84,19 +84,19 @@ function ReportPage() {
             <div className="border rounded-lg p-4 bg-white shadow-sm w-max mb-6">
               <div className="flex space-x-4">
                 <button
-                  onClick={() => router.push("/admin/report/daily")}
+                  onClick={() => router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/report/daily`)}
                   className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded"
                 >
                   รายงานประจำวัน
                 </button>
                 <button
-                  onClick={() => router.push("/admin/report/cash-drawer")}
+                  onClick={() => router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/report/cash-drawer`)}
                   className="bg-gray-400 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded"
                 >
                   รายงานลิ้นชักเก็บเงิน
                 </button>
                 <button
-                  onClick={() => router.push("/admin/report/shift-summary")}
+                  onClick={() => router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/report/shift-summary`)}
                   className="bg-gray-400 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded"
                 >
                   รายงานเปิดปิดร้าน

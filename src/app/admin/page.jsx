@@ -16,9 +16,9 @@ function AdminPage() {
     
     useEffect(() => {
       if (!session) {
-        redirect("/login");
+        redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`);
       } else if (session?.user?.role !== "admin") {
-        redirect("/welcome");
+        redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/welcome`);
       } else if (session?.user?.lastLoginDate) {
         const last = new Date(session.user.lastLoginDate);
         const now = new Date();
@@ -43,7 +43,7 @@ function AdminPage() {
     const getTotalUsers = async () => {
         try {
 
-            const res = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/totalusers`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/totalusers`, {
                 cache: "no-store"
             })
 
@@ -62,7 +62,7 @@ function AdminPage() {
     const getTotalPosts = async () => {
         try {
 
-            const res = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/totalposts`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/totalposts`, {
                 cache: "no-store"
             })
 

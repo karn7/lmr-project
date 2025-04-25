@@ -27,7 +27,7 @@ export default function PrintReceiptPage() {
       <button
         className="bg-green-600 text-white px-4 py-2 rounded mb-3 w-full"
         onClick={() =>
-          window.open(`/receipt/${docNumber}`, "_blank", "width=500,height=600")
+          window.open(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/receipt/${docNumber}`, "_blank", "width=500,height=600")
         }
       >
         พิมพ์ใบเสร็จ
@@ -35,7 +35,7 @@ export default function PrintReceiptPage() {
       <button
         className="bg-blue-500 text-white px-4 py-2 rounded mb-3 w-full"
         onClick={() =>
-          window.open(`/receipt-mini/${docNumber}`, "_blank", "width=500,height=600")
+          window.open(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/receipt-mini/${docNumber}`, "_blank", "width=500,height=600")
         }
       >
         พิมพ์บิลย่อ
@@ -44,7 +44,7 @@ export default function PrintReceiptPage() {
         className="bg-gray-600 text-white px-4 py-2 rounded w-full"
         onClick={() => {
           window.close();
-          window.opener?.location.replace("/welcome");
+          window.opener?.location.replace(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/welcome`);
         }}
       >
         จบรายการ

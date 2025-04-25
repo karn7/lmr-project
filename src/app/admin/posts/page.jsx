@@ -16,8 +16,8 @@ import DeleteBtn from './DeleteBtn'
 function AdminUserManagePage() {
 
     const { data: session } = useSession();
-    if (!session) redirect("/login");
-    if (!session?.user?.role === "admin") redirect("/welcome");
+    if (!session) redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`);
+    if (!session?.user?.role === "admin") redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/welcome`);
 
     const [allPostsData, setAllPostsData] = useState([]);
 
@@ -26,7 +26,7 @@ function AdminUserManagePage() {
     const getAllPostsData = async () => {
         try {
 
-            const res = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/totalposts`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH}/api/totalposts`, {
                 cache: "no-store"
             })
 
@@ -84,7 +84,7 @@ function AdminUserManagePage() {
                                                 </td>
                                                 <td className='p-5'>{val.content}</td>
                                                 <td className='p-5'>
-                                                    <Link className='bg-gray-500 text-white border py-2 px-3 rounded text-lg my-2' href={`/admin/posts/edit/${val._id}`}>Edit</Link>
+                                                    <Link className='bg-gray-500 text-white border py-2 px-3 rounded text-lg my-2' href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/posts/edit/${val._id}`}>Edit</Link>
                                                     <DeleteBtn id={val._id} />
                                                 </td>
                                             </tr>

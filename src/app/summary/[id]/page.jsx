@@ -13,7 +13,7 @@
    useEffect(() => {
      const fetchData = async () => {
        try {
-         const res = await fetch(`/api/shift-summary?id=${id}`);
+         const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/shift-summary?id=${id}`);
          const result = await res.json();
          if (res.ok) {
            console.log("✅ API result", result);
