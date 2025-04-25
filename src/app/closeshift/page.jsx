@@ -67,6 +67,14 @@ export default function CloseShiftPage() {
         return;
       }
 
+      // Logging before sending close shift request
+      console.log("🚀 กำลังส่งข้อมูลปิดร้าน:", {
+        closeAmount,
+        shiftNo: dataCheck.shiftNo,
+        date: today,
+        employee: session?.user?.name
+      });
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/closeshift`, {
         method: "POST",
         headers: {
@@ -81,6 +89,7 @@ export default function CloseShiftPage() {
       });
 
       if (res.ok) {
+        console.log("✅ ปิดร้านสำเร็จ");
         alert("ปิดร้านเรียบร้อยแล้ว");
         setSummary({
           cashBalance: dataCheck.cashBalance,
@@ -89,6 +98,7 @@ export default function CloseShiftPage() {
       } else {
         const data = await res.json();
         alert(data.message || "เกิดข้อผิดพลาดในการปิดร้าน");
+        console.log("❌ ข้อผิดพลาดจาก API:", data);
       }
     } catch (err) {
       console.error("Error closing shift:", err);

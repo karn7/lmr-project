@@ -24,8 +24,9 @@ function RegisterPage() {
     const router = useRouter();
 
     useEffect(() => {
-        if (!session) return;
-        if (!session.user || session.user.role !== "admin") {
+        if (session && session.user?.role !== "admin") {
+            router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/`);
+        } else if (!session) {
             router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/`);
         }
     }, [session]);
