@@ -21,6 +21,8 @@ function ReportPage() {
     const [branches, setBranches] = useState([]);
     const [employees, setEmployees] = useState([]);
     const [types, setTypes] = useState([]);
+    const [sortKey, setSortKey] = useState(null);
+    const [sortOrder, setSortOrder] = useState("asc");
     
     useEffect(() => {
         // fetch records
@@ -51,7 +53,37 @@ function ReportPage() {
       const typeMatch = selectedType === "ทั้งหมด" || r.payType === selectedType;
       return dateMatch && branchMatch && employeeMatch && typeMatch;
     });
-    
+
+    const sortedFiltered = [...filtered].sort((a, b) => {
+      if (!sortKey) return 0;
+      let aValue = a[sortKey];
+      let bValue = b[sortKey];
+
+      if (sortKey === "createdAt") {
+        aValue = new Date(aValue);
+        bValue = new Date(bValue);
+      }
+
+      if (typeof aValue === "string") {
+        return sortOrder === "asc"
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      } else {
+        return sortOrder === "asc"
+          ? aValue - bValue
+          : bValue - aValue;
+      }
+    });
+
+    const handleSort = (key) => {
+      if (sortKey === key) {
+        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      } else {
+        setSortKey(key);
+        setSortOrder("asc");
+      }
+    };
+
     useEffect(() => {
       if (!session) {
         redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`);
@@ -161,18 +193,30 @@ function ReportPage() {
               <table className="w-full text-left border mb-10">
                 <thead className="bg-gray-100">
                   <tr>
-                    <th className="p-2 border">เลขที่รายการ</th>
-                    <th className="p-2 border">เวลา</th>
-                    <th className="p-2 border">ประเภท</th>
-                    <th className="p-2 border">ยอดรวม</th>
-                    <th className="p-2 border">สาขา</th>
-                    <th className="p-2 border">พนักงาน</th>
+                    <th className="p-2 border cursor-pointer" onClick={() => handleSort('docNumber')}>
+                      เลขที่รายการ {sortKey === 'docNumber' && (sortOrder === 'asc' ? '▲' : '▼')}
+                    </th>
+                    <th className="p-2 border cursor-pointer" onClick={() => handleSort('createdAt')}>
+                      เวลา {sortKey === 'createdAt' && (sortOrder === 'asc' ? '▲' : '▼')}
+                    </th>
+                    <th className="p-2 border cursor-pointer" onClick={() => handleSort('payType')}>
+                      ประเภท {sortKey === 'payType' && (sortOrder === 'asc' ? '▲' : '▼')}
+                    </th>
+                    <th className="p-2 border cursor-pointer" onClick={() => handleSort('total')}>
+                      ยอดรวม {sortKey === 'total' && (sortOrder === 'asc' ? '▲' : '▼')}
+                    </th>
+                    <th className="p-2 border cursor-pointer" onClick={() => handleSort('branch')}>
+                      สาขา {sortKey === 'branch' && (sortOrder === 'asc' ? '▲' : '▼')}
+                    </th>
+                    <th className="p-2 border cursor-pointer" onClick={() => handleSort('employee')}>
+                      พนักงาน {sortKey === 'employee' && (sortOrder === 'asc' ? '▲' : '▼')}
+                    </th>
                     <th className="p-2 border">ดู</th>
                     <th className="p-2 border">ลบ</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((r) => (
+                  {sortedFiltered.map((r) => (
                     <tr key={r.docNumber}>
                       <td className="p-2 border">{r.docNumber}</td>
                       <td className="p-2 border">{new Date(r.createdAt).toLocaleTimeString()}</td>

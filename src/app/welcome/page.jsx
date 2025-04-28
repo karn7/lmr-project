@@ -22,6 +22,9 @@ function WelcomePage() {
   const [postData, setPostData] = useState([]);
   const [records, setRecords] = useState([]);
 
+  const [sortKey, setSortKey] = useState(null);
+  const [sortOrder, setSortOrder] = useState("asc");
+
   const userEmail = session?.user?.email;
 
   const getPosts = async () => {
@@ -61,6 +64,36 @@ function WelcomePage() {
     getPosts();
     getRecords();
   }, []);
+
+  const sortedRecords = [...records].sort((a, b) => {
+    if (!sortKey) return 0;
+    let aValue = a[sortKey];
+    let bValue = b[sortKey];
+
+    if (sortKey === "createdAt") {
+      aValue = new Date(aValue);
+      bValue = new Date(bValue);
+    }
+
+    if (typeof aValue === "string") {
+      return sortOrder === "asc"
+        ? aValue.localeCompare(bValue)
+        : bValue.localeCompare(aValue);
+    } else {
+      return sortOrder === "asc"
+        ? aValue - bValue
+        : bValue - aValue;
+    }
+  });
+
+  const handleSort = (key) => {
+    if (sortKey === key) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortOrder("asc");
+    }
+  };
 
   return (
     <Container>
@@ -109,15 +142,23 @@ function WelcomePage() {
               <table className="w-full border">
                 <thead className="bg-gray-100">
                   <tr>
-                    <th className="border px-3 py-2">เลขที่รายการ</th>
-                    <th className="border px-3 py-2">เวลา</th>
-                    <th className="border px-3 py-2">ยอดรวม</th>
-                    <th className="border px-3 py-2">ประเภท</th>
+                    <th className="border px-3 py-2 cursor-pointer" onClick={() => handleSort('docNumber')}>
+                      เลขที่รายการ {sortKey === 'docNumber' && (sortOrder === 'asc' ? '▲' : '▼')}
+                    </th>
+                    <th className="border px-3 py-2 cursor-pointer" onClick={() => handleSort('createdAt')}>
+                      เวลา {sortKey === 'createdAt' && (sortOrder === 'asc' ? '▲' : '▼')}
+                    </th>
+                    <th className="border px-3 py-2 cursor-pointer" onClick={() => handleSort('total')}>
+                      ยอดรวม {sortKey === 'total' && (sortOrder === 'asc' ? '▲' : '▼')}
+                    </th>
+                    <th className="border px-3 py-2 cursor-pointer" onClick={() => handleSort('payType')}>
+                      ประเภท {sortKey === 'payType' && (sortOrder === 'asc' ? '▲' : '▼')}
+                    </th>
                     <th className="border px-3 py-2">พิมพ์</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {records.map((record, index) => (
+                  {sortedRecords.map((record, index) => (
                     <tr key={index} className={`text-center ${
                       record.payType === "Buying" ? "text-green-600" :
                       record.payType === "Selling" ? "text-orange-500" : "text-black"
