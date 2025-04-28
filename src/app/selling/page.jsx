@@ -148,36 +148,39 @@ function ExchangePage() {
       if (res.ok) {
         const { docNumber } = await res.json();
 
-        // Updated logic for THB and foreign currencies
-        const payloadTHB = {
-          docNumber,
-          employee: session?.user?.name || "",
-          shiftNo: currentShift?.shiftNo,
-          totalTHB: totalSum,
-          action: "increase", 
-        };
-        console.log("📤 ส่งข้อมูล update-cash สำหรับ THB:", payloadTHB);
-        await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/update-cash`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payloadTHB),
-        });
-
-        for (const record of records) {
-          const payload = {
+        if (payMethod !== "transfer") {
+          const payloadTHB = {
             docNumber,
             employee: session?.user?.name || "",
             shiftNo: currentShift?.shiftNo,
-            currency: record.currency,
-            amount: parseFloat(record.amount),
-            action: "decrease", 
+            totalTHB: totalSum,
+            action: "increase",
           };
-          console.log("📤 ส่งข้อมูล update-cash:", payload);
+          console.log("📤 ส่งข้อมูล update-cash สำหรับ THB:", payloadTHB);
           await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/update-cash`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
+            body: JSON.stringify(payloadTHB),
           });
+        }
+
+        if (receiveMethod !== "transfer") {
+          for (const record of records) {
+            const payload = {
+              docNumber,
+              employee: session?.user?.name || "",
+              shiftNo: currentShift?.shiftNo,
+              currency: record.currency,
+              amount: parseFloat(record.amount),
+              action: "decrease",
+            };
+            console.log("📤 ส่งข้อมูล update-cash:", payload);
+            await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/update-cash`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+          }
         }
 
         const total = totalSum.toFixed(2);

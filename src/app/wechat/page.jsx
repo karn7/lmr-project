@@ -13,6 +13,8 @@ import { redirect } from "next/navigation";
 function WelcomePage() {
   const { data: session } = useSession();
 
+  const [currentShift, setCurrentShift] = useState({});
+
   useEffect(() => {
     if (!session) {
       redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`);
@@ -73,6 +75,20 @@ function WelcomePage() {
   }, []);
 
   useEffect(() => {
+    const fetchShift = async () => {
+      if (!session?.user?.name) return;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/check?employee=${session.user.name}`);
+      const data = await res.json();
+      if (data?.shiftNo) {
+        setCurrentShift(data);
+      } else {
+        console.warn("ไม่พบข้อมูลรอบที่เปิดอยู่");
+      }
+    };
+    fetchShift();
+  }, [session?.user?.name]);
+
+  useEffect(() => {
     const matchedPost = postData.find(p => p.title === "CNY" && p.content === "100-50");
     const rate = parseFloat(matchedPost?.buy || "0");
     const amount = parseFloat(exchangeAmount);
@@ -114,7 +130,27 @@ function WelcomePage() {
       const data = await res.json();
       if (res.ok) {
         setDocNumber(data.docNumber);
-        alert("บันทึกรายการสำเร็จ เลขที่: " + data.docNumber);
+
+        const payloadTHB = {
+          docNumber: data.docNumber,
+          employee: session?.user?.name || "",
+          shiftNo: currentShift?.shiftNo || "",
+          totalTHB: parseFloat(totalTHB),
+          action: "decrease",
+        };
+        console.log("📤 ส่งข้อมูล update-cash สำหรับ THB:", payloadTHB);
+        await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/update-cash`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payloadTHB),
+        });
+
+        const total = parseFloat(totalTHB).toFixed(2);
+        window.open(
+          `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/printreceipt?docNumber=${data.docNumber}&total=${total}`,
+          "_blank",
+          "width=500,height=400"
+        );
       } else {
         alert("เกิดข้อผิดพลาด: " + data.message);
       }
