@@ -116,6 +116,7 @@ function WelcomePage() {
           ],
           employee: session?.user?.name,
           branch: session?.user?.branch,
+          shiftNo: currentShift?.shiftNo || "",
           customerName,
           payType: "Wechat",
           payMethod: "wechat",

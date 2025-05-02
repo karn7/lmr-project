@@ -212,7 +212,6 @@ function ReportPage() {
                       พนักงาน {sortKey === 'employee' && (sortOrder === 'asc' ? '▲' : '▼')}
                     </th>
                     <th className="p-2 border">ดู</th>
-                    <th className="p-2 border">ลบ</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -225,10 +224,16 @@ function ReportPage() {
                       <td className="p-2 border">{r.branch}</td>
                       <td className="p-2 border">{r.employee}</td>
                       <td className="p-2 border">
-                        <button className="text-blue-600">ดู</button>
-                      </td>
-                      <td className="p-2 border">
-                        <button className="text-red-600">ลบ</button>
+                        <button
+                          className="text-blue-600"
+                          onClick={() =>
+                            router.push(
+                              `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/report/daily/dailylist/${r.docNumber}`
+                            )
+                          }
+                        >
+                          ดู
+                        </button>
                       </td>
                     </tr>
                   ))}

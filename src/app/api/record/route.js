@@ -11,6 +11,7 @@ export async function POST(req) {
     const {
       items,
       employee,
+      shiftNo, 
       branch,
       customerName,
       payType,
@@ -25,6 +26,7 @@ export async function POST(req) {
     console.log("📥 Incoming record data:", {
       items,
       employee,
+      shiftNo, 
       branch,
       customerName,
       payType,
@@ -41,6 +43,7 @@ export async function POST(req) {
 
     const newRecord = new Record({
       docNumber,
+      shiftNo, 
       items,
       employee,
       branch,

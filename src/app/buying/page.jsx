@@ -132,6 +132,7 @@ function ExchangePage() {
           docNumber,
           date,
           employee: session?.user?.name || "",
+          shiftNo: currentShift?.shiftNo || "",
           customerName,
           note,
           branch: session?.user?.branch || "",

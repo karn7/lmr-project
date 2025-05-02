@@ -142,6 +142,7 @@ function ExchangePage() {
           total: totalSum,
           items: records,
           timestamp: new Date().toISOString(),
+          shiftNo: currentShift?.shiftNo || "",
         }),
       });
 

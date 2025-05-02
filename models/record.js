@@ -5,6 +5,7 @@ const recordSchema = new Schema({
   customerName: String,
   employee: String,
   branch: String,
+  shiftNo: String,
   date: String,
   total: Number,
   payType: String, // "P" หรือ "NP"
