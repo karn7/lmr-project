@@ -80,14 +80,14 @@ function RegisterPage() {
                 console.log("User registration failed.");
             }
 
-        } catch(error) {
+        } catch (error) {
             console.log("Error during registration: ", error);
         }
     }
 
-  return (
-    <Container>
-        <Navbar />
+    return (
+        <Container>
+            <Navbar />
             <div className='flex-grow'>
                 <div className='flex justify-center items-center'>
                     <div className='w-[400px] shadow-xl p-10 mt-5 rounded-xl'>
@@ -123,9 +123,9 @@ function RegisterPage() {
                     </div>
                 </div>
             </div>
-        <Footer />
-    </Container>
-  )
+            <Footer />
+        </Container>
+    )
 }
 
 export default RegisterPage

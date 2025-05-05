@@ -35,6 +35,75 @@ export default function Page({ params }) {
     fetchRecord();
   }, [docNumber]);
 
+  useEffect(() => {
+    if (!record) return;
+
+    async function updateCash() {
+      const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+      try {
+        let payload = [];
+
+        if (record.payType === "Buying") {
+          if (record.payMethod === "cash") {
+            payload.push({
+              currency: "THB",
+              amount: record.total,
+              type: "increase",
+            });
+          }
+          if (record.items && record.items.length > 0) {
+            record.items.forEach((item) => {
+              payload.push({
+                currency: item.currency,
+                amount: item.amount,
+                type: "decrease",
+              });
+            });
+          }
+        } else if (record.payType === "Selling") {
+          if (record.receiveMethod === "cash") {
+            payload.push({
+              currency: "THB",
+              amount: record.total,
+              type: "decrease",
+            });
+          }
+          if (record.items && record.items.length > 0) {
+            record.items.forEach((item) => {
+              payload.push({
+                currency: item.currency,
+                amount: item.amount,
+                type: "increase",
+              });
+            });
+          }
+        } else if (record.payType === "Wechat") {
+          payload.push({
+            currency: "THB",
+            amount: record.total,
+            type: "increase",
+          });
+        }
+
+        console.log("update-cash payload:", payload);
+
+        if (payload.length > 0) {
+          await fetch(`${base}/api/open-shift/update-cash`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ updates: payload }),
+          });
+        }
+      } catch (error) {
+        console.error("Failed to update cash:", error);
+      }
+    }
+
+    updateCash();
+  }, [record]);
+
   if (loading) return <div className="text-left p-4">Loading...</div>;
   if (error) return <div className="text-left p-4 text-red-600">Error: {error}</div>;
   if (!record) return <div className="text-left p-4">No record found.</div>;
@@ -93,6 +162,11 @@ export default function Page({ params }) {
             });
           }
         }
+      } else if (record.payType === "Wechat") {
+        message += `- เงินสด (THB) จะเพิ่มขึ้น ${record.total.toLocaleString("th-TH", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}\n`;
       }
 
       if (confirm(message)) {
