@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Page({ params }) {
@@ -8,7 +8,9 @@ export default function Page({ params }) {
   const [record, setRecord] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
+  const cashUpdated = useRef(false);
 
   useEffect(() => {
     if (!docNumber) return;
@@ -35,74 +37,96 @@ export default function Page({ params }) {
     fetchRecord();
   }, [docNumber]);
 
-  useEffect(() => {
-    if (!record) return;
+  async function updateCashOnDeleteOnly() {
+    if (cashUpdated.current) {
+      console.log("⛔ updateCashOnDeleteOnly() ถูกบล็อก ไม่ให้ทำซ้ำ");
+      return;
+    }
+    if (!record || !record.payType || record.total == null || !record.docNumber) {
+      console.warn("⚠️ ข้อมูลไม่ครบ ไม่สามารถอัปเดตเงินสดได้", record);
+      return;
+    }
+    console.log("🧾 record ที่จะใช้ในการอัปเดตเงิน:", record);
+    cashUpdated.current = true;
+    console.log("✅ เรียก updateCashOnDeleteOnly");
 
-    async function updateCash() {
-      const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
-      try {
-        let payload = [];
+    const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+    try {
+      let updates = [];
 
-        if (record.payType === "Buying") {
-          if (record.payMethod === "cash") {
-            payload.push({
-              currency: "THB",
-              amount: record.total,
-              type: "increase",
-            });
-          }
-          if (record.items && record.items.length > 0) {
-            record.items.forEach((item) => {
-              payload.push({
-                currency: item.currency,
-                amount: item.amount,
-                type: "decrease",
-              });
-            });
-          }
-        } else if (record.payType === "Selling") {
-          if (record.receiveMethod === "cash") {
-            payload.push({
-              currency: "THB",
-              amount: record.total,
-              type: "decrease",
-            });
-          }
-          if (record.items && record.items.length > 0) {
-            record.items.forEach((item) => {
-              payload.push({
-                currency: item.currency,
-                amount: item.amount,
-                type: "increase",
-              });
-            });
-          }
-        } else if (record.payType === "Wechat") {
-          payload.push({
+      if (record.payType === "Buying") {
+        if (record.payMethod === "cash") {
+          updates.push({
             currency: "THB",
             amount: record.total,
-            type: "increase",
+            action: "increase",
           });
         }
+        if (record.items && record.items.length > 0) {
+          record.items.forEach((item) => {
+            updates.push({
+              currency: item.currency,
+              amount: item.amount,
+              action: "decrease",
+            });
+          });
+        }
+      } else if (record.payType === "Selling") {
+        if (record.receiveMethod === "cash") {
+          updates.push({
+            currency: "THB",
+            amount: record.total,
+            action: "decrease",
+          });
+        }
+        if (record.items && record.items.length > 0) {
+          record.items.forEach((item) => {
+            updates.push({
+              currency: item.currency,
+              amount: item.amount,
+              action: "increase",
+            });
+          });
+        }
+      } else if (record.payType === "Wechat") {
+        updates.push({
+          currency: "THB",
+          amount: record.total,
+          action: "increase",
+        });
+      } else if (record.payType === "Lottery") {
+        updates.push({
+          currency: "THB",
+          amount: record.total,
+          action: "increase",
+        });
+      }
 
-        console.log("update-cash payload:", payload);
+      console.log("📤 updates ที่จะส่งไป update-cash:", updates);
 
-        if (payload.length > 0) {
+      if (updates.length > 0) {
+        for (const update of updates) {
           await fetch(`${base}/api/open-shift/update-cash`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ updates: payload }),
+            body: JSON.stringify({
+              shiftNo: record.shiftNo,
+              docNumber: record.docNumber,
+              employee: record.employee || (record?.user?.name ?? ""),
+              date: record.date,
+              ...update, // ส่งค่า currency, amount, action แบบแยกรายการ
+            }),
           });
         }
-      } catch (error) {
-        console.error("Failed to update cash:", error);
+      } else {
+        console.warn("⚠️ ไม่พบข้อมูล update-cash ที่ต้องส่ง");
       }
+    } catch (error) {
+      console.error("❌ Failed to update cash:", error);
     }
-
-    updateCash();
-  }, [record]);
+  }
 
   if (loading) return <div className="text-left p-4">Loading...</div>;
   if (error) return <div className="text-left p-4 text-red-600">Error: {error}</div>;
@@ -119,8 +143,10 @@ export default function Page({ params }) {
   const formattedDate = new Date(record.createdAt).toLocaleString("th-TH", options).replace(",", " เวลา");
 
   const handleDelete = async () => {
-    const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+    if (isDeleting) return;
+    setIsDeleting(true);
     try {
+      const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
       const resCheck = await fetch(`${base}/api/open-shift/check?shiftNo=${record.shiftNo}`);
       if (!resCheck.ok) {
         alert("เกิดข้อผิดพลาดในการตรวจสอบกะ");
@@ -167,9 +193,16 @@ export default function Page({ params }) {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         })}\n`;
+      } else if (record.payType === "Lottery") {
+        message += `- เงินสด (THB) จะเพิ่มขึ้น ${record.total.toLocaleString("th-TH", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}\n`;
       }
 
       if (confirm(message)) {
+        await updateCashOnDeleteOnly();
+
         const resDelete = await fetch(`${base}/api/record/delete`, {
           method: "POST",
           headers: {
@@ -185,6 +218,8 @@ export default function Page({ params }) {
       }
     } catch (error) {
       alert("เกิดข้อผิดพลาด: " + error.message);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -214,7 +249,19 @@ export default function Page({ params }) {
           >
             พิมพ์บิล
           </button>
-          <button onClick={handleDelete} className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">ลบรายการ</button>
+          <button
+            type="button"
+            onClick={() => {
+              console.log("👆 กดปุ่มลบ");
+              handleDelete();
+            }}
+            disabled={isDeleting}
+            className={`bg-red-600 text-white px-4 py-2 rounded ${
+              isDeleting ? "opacity-50 cursor-not-allowed" : "hover:bg-red-700"
+            }`}
+          >
+            ลบรายการ
+          </button>
         </div>
       </div>
 

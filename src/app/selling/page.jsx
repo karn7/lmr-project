@@ -413,7 +413,7 @@ function ExchangePage() {
                     type="number"
                     className="w-full px-2 py-1 border rounded"
                     value={rate}
-                    readOnly
+                    onChange={(e) => setRate(e.target.value)}
                   />
                 </div>
                 <div>

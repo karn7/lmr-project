@@ -76,7 +76,7 @@
              return (
                <tr key={cur}>
                  <td className="p-2 border">{cur}</td>
-                 <td className="p-2 border">{Number(data.cashBalance[cur]).toLocaleString()}</td>
+                 <td className="p-2 border">{Number(data.openAmount?.[cur] || 0).toLocaleString()}</td>
                  <td className="p-2 border">{Number(data.cashBalance[cur]).toLocaleString()}</td>
                  <td className="p-2 border">{Number(data.closeAmount?.[cur] || 0).toLocaleString()}</td>
                  <td className={`p-2 border ${color}`}>{diff.toLocaleString()}</td>

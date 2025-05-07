@@ -107,36 +107,40 @@ function WelcomePage() {
             <div className="flex-1 bg-white shadow-md rounded-lg p-5">
               <div className="flex justify-between items-start"></div>
 
-              <div className="flex gap-4 mb-6">
-                <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/buying`}>
-                  <button className="bg-green-500 text-white py-2 px-3 rounded-md text-lg hover:bg-green-600">
-                    Buy
-                  </button>
-                </Link>
-
-                <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/selling`}>
-                  <button className="bg-green-500 text-white py-2 px-3 rounded-md text-lg hover:bg-green-600">
-                    Sell
-                  </button>
-                </Link>
-
-                <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/wechat`}>
-                  <button className="bg-blue-500 text-white py-2 px-3 rounded-md text-lg hover:bg-blue-600">
-                    Wechat
-                  </button>
-                </Link>
-
-                <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/withdraw`}>
-                  <button className="bg-blue-500 text-white py-2 px-3 rounded-md text-lg hover:bg-blue-600">
-                  Withdraw
-                  </button>
-                </Link>
-
-                <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/lot`}>
-                  <button className="bg-purple-500 text-white py-2 px-3 rounded-md text-lg hover:bg-purple-600">
-                    Lot
-                  </button>
-                </Link>
+              <div className="flex justify-between mb-6">
+                <div className="flex gap-4">
+                  <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/buying`}>
+                    <button className="bg-green-500 text-white py-2 px-3 rounded-md text-lg hover:bg-green-600">
+                      Buy
+                    </button>
+                  </Link>
+                  <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/selling`}>
+                    <button className="bg-green-500 text-white py-2 px-3 rounded-md text-lg hover:bg-green-600">
+                      Sell
+                    </button>
+                  </Link>
+                  <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/wechat`}>
+                    <button className="bg-blue-500 text-white py-2 px-3 rounded-md text-lg hover:bg-blue-600">
+                      Wechat
+                    </button>
+                  </Link>
+                  <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/withdraw`}>
+                    <button className="bg-blue-500 text-white py-2 px-3 rounded-md text-lg hover:bg-blue-600">
+                      Withdraw
+                    </button>
+                  </Link>
+                  <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/lot`}>
+                    <button className="bg-purple-500 text-white py-2 px-3 rounded-md text-lg hover:bg-purple-600">
+                      Lot
+                    </button>
+                  </Link>
+                </div>
+                <button
+                  onClick={getRecords}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded"
+                >
+                  🔄 รีเฟรชข้อมูล
+                </button>
               </div>
 
               <table className="w-full border">

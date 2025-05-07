@@ -205,7 +205,29 @@ function WelcomePage() {
               </div>
               <div>
                 <label className="block font-medium">เรท:</label>
-                <input type="text" value={postData.find(p => p.title === "CNY" && p.content === "100-50")?.buy || ""} readOnly className="w-full border px-2 py-1 bg-gray-100" />
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={postData.find(p => p.title === "CNY" && p.content === "100-50")?.buy || ""}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    const value = raw.replace(/[^0-9.]/g, "");
+                    // Allow only one dot
+                    const parts = value.split(".");
+                    const sanitized = parts.length > 2 ? parts[0] + "." + parts.slice(1).join("") : value;
+
+                    setPostData((prev) => {
+                      const updated = [...prev];
+                      const index = updated.findIndex(p => p.title === "CNY" && p.content === "100-50");
+                      if (index !== -1) {
+                        updated[index] = { ...updated[index], buy: sanitized };
+                      }
+                      return updated;
+                    });
+                  }}
+                  className="w-full border px-2 py-1"
+                />
               </div>
               <div>
                 <label className="block font-medium">จำนวนที่แลก:</label>

@@ -32,16 +32,17 @@ export async function GET(req) {
       return NextResponse.json({ message: "ไม่พบข้อมูลการเปิด-ปิดร้าน" }, { status: 404 });
     }
 
-    const { cashBalance, closeAmount, date, shiftNo, branch, employee } = shift;
+    const { cashBalance, openAmount, closeAmount, date, shiftNo, branch, employee } = shift;
 
-    return NextResponse.json({
-      cashBalance,
-      closeAmount,
-      date,
-      shiftNo,
-      branch,
-      employee,
-    });
+return NextResponse.json({
+  cashBalance,
+  openAmount, 
+  closeAmount,
+  date,
+  shiftNo,
+  branch,
+  employee,
+});
   } catch (err) {
     console.error("❌ Error loading shift summary:", err);
     return NextResponse.json({ message: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์" }, { status: 500 });
