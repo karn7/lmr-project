@@ -29,6 +29,7 @@ export async function GET(req) {
     open: isOpen,
     shiftNo: shift?.shiftNo ?? null,
     cashBalance: shift?.cashBalance ?? null,
+    openAmount: shift?.openAmount ?? null,
     date: shift?.date ?? null,
     branch: shift?.branch ?? null,
     employee: shift?.employee ?? null,

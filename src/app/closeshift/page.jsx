@@ -94,6 +94,7 @@ export default function CloseShiftPage() {
         setSummary({
           cashBalance: dataCheck.cashBalance,
           closeAmount,
+          openAmount: dataCheck.openAmount,
         });
       } else {
         const data = await res.json();
@@ -200,7 +201,7 @@ export default function CloseShiftPage() {
                   return (
                     <tr key={cur}>
                       <td className="border px-4 py-2">{cur}</td>
-                      <td className="border px-4 py-2 text-right">{open.toLocaleString()}</td>
+                      <td className="border px-4 py-2 text-right">{Number(summary.openAmount?.[cur] || 0).toLocaleString()}</td>
                       <td className="border px-4 py-2 text-right">{open.toLocaleString()}</td>
                       <td className="border px-4 py-2 text-right">{close.toLocaleString()}</td>
                       <td className={`border px-4 py-2 text-right ${color}`}>{diff.toLocaleString()}</td>

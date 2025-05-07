@@ -33,7 +33,7 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
 
   return (
     <div className="w-full flex justify-center">
-      <div className="w-[120mm]">
+      <div className="w-[110mm]">
         <div className="p-6 text-sm font-mono">
           <h1 className="text-center text-lg font-bold">EXCHANGE RECEIPT</h1>
           <p className="text-center font-bold text-base">มันนี่เมท เคอเรนซี่ เอ็กซ์เชนจ์</p>
@@ -80,7 +80,8 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
           </div>
           
           <div className="mt-6 text-center text-xs italic">
-            เอกสารใช้ในการแลกเปลี่ยนเงินตราเท่านั้น
+            <p>กรุณาตรวจสอบจำนวนเงินให้ถูกต้อง ถือว่าลูกค้าได้ตรวจสอบและรับเงินครบถ้วนแล้ว</p>
+            <p>Please verify the amount. It is deemed that the customer has checked and received the full amount.</p>
           </div>
         </div>
       </div>

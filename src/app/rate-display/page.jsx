@@ -24,7 +24,7 @@ function RateDisplayPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const priorityOrder = ["USD", "GBP", "EUR"];
+  const priorityOrder = ["USD", "GBP", "EUR", "CHF", "AUD", "JPY", "MYR", "SGD", "HKD", "CNY"];
   const sortedPostData = [...postData].sort((a, b) => {
     const aPriority = priorityOrder.indexOf(a.title);
     const bPriority = priorityOrder.indexOf(b.title);
@@ -33,6 +33,16 @@ function RateDisplayPage() {
     if (bPriority !== -1) return 1;
     return a.title.localeCompare(b.title);
   });
+
+  const rowsPerPage = 34;
+  const [page, setPage] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPage(prev => (prev + 1) % Math.ceil(sortedPostData.length / rowsPerPage));
+    }, 10000); // Switch page every 10 seconds
+    return () => clearInterval(interval);
+  }, [sortedPostData]);
 
   return (
     <div className="min-h-screen bg-white p-4">
@@ -49,36 +59,39 @@ function RateDisplayPage() {
           <tbody>
             {sortedPostData
               .filter(val => val.title !== "THB")
+              .slice(page * rowsPerPage, (page + 1) * rowsPerPage)
               .map((val, index, array) => {
-              const isFirstOfGroup = index === 0 || val.title !== array[index - 1].title;
-              const bgColor = isFirstOfGroup ? "bg-orange-50" : "";
-              return (
-                <tr key={val._id} className={`hover:bg-gray-100 ${bgColor}`}>
-                  <td className="py-2 px-4 border-b text-center">
-                    {isFirstOfGroup ? (
-                      <div className="flex items-center gap-2">
-                        <img
-                          src={`/cur/${val.title.toUpperCase()}.png`}
-                          alt={val.title}
-                          className="w-10 h-6 object-cover border rounded"
-                        />
-                        {val.title}
-                      </div>
-                    ) : (
-                      ""
-                    )}
-                  </td>
-                  <td className="py-2 px-4 border-b text-center">{val.content}</td>
-                  <td className="py-2 px-4 border-b text-center text-green-700 font-bold">{val.buy}</td>
-                  <td className="py-2 px-4 border-b text-center text-orange-600 font-bold">{val.sell}</td>
-                </tr>
-              );
-            })}
+                const globalIndex = page * rowsPerPage + index;
+                const isFirstOfGroup = globalIndex === 0 || val.title !== sortedPostData[globalIndex - 1].title;
+                const groupColor = globalIndex % 2 === 0 ? "bg-orange-50" : "bg-white";
+                const bgColor = isFirstOfGroup ? groupColor : "";
+                return (
+                  <tr key={val._id} className={`hover:bg-gray-100 ${bgColor}`}>
+                    <td className="py-2 px-4 border-b text-center">
+                      {isFirstOfGroup ? (
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={`/cur/${val.title.toUpperCase()}.png`}
+                            alt={val.title}
+                            className="w-10 h-6 object-cover border rounded"
+                          />
+                          {val.title}
+                        </div>
+                      ) : (
+                        ""
+                      )}
+                    </td>
+                    <td className="py-2 px-4 border-b text-center">{val.content}</td>
+                    <td className="py-2 px-4 border-b text-center text-green-700 font-bold text-xl">{val.buy}</td>
+                    <td className="py-2 px-4 border-b text-center text-orange-600 font-bold text-xl">{val.sell}</td>
+                  </tr>
+                );
+              })}
           </tbody>
         </table>
       </div>
 
-      <div className="mt-8 text-center text-sm leading-relaxed">
+      <div className="mt-8 text-center text-xl leading-relaxed">
         <p className="text-red-600 font-semibold">มันนี่เมท เคอเรนซี่ เอ็กซ์เชนจ์ (ตึกไอที อัศวรรณ หนองคาย)</p>
         <p className="text-gray-700">เรารับแลกเงินมากกว่า 100 สกุล เรทดี เรทสูง แน่นอน</p>
         <p className="text-gray-700">รับแลกเงินยกเลิกใช้ เงินชำรุด ขาดมีรอยหมึก ทุกแบบ เรทตามสภาพ</p>
