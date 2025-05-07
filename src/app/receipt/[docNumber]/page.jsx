@@ -32,12 +32,12 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
   }
 
   return (
-    <div className="w-[80mm]">
+    <div className="w-[100mm]">
       <div className="p-6 text-sm font-mono">
         
         <h1 className="text-center text-lg font-bold">EXCHANGE RECEIPT</h1>
-        <p className="text-center font-bold text-base">MoneyMate Currency Exchange</p>
         <p className="text-center font-bold text-base">มันนี่เมท เคอเรนซี่ เอ็กซ์เชนจ์</p>
+        <p className="text-center text-xs">MoneyMate Currency Exchange</p>
         <p className="text-center text-xs">305 ม.10 ถ.มิตรภาพ ต.โพธิ์ชัย อ.เมือง จ.หนองคาย</p>
         <p className="text-center text-xs">0910608858 , 0642849169</p>
         <p className="text-center text-xs">เลขที่ใบอนุญาติ : MC425670002</p>
