@@ -16,8 +16,8 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
         
         setTimeout(() => {
           window.print();
-          window.close();
-        }, 500);
+          setTimeout(() => window.close(), 100);
+        }, 1000);
       } catch (err) {
         console.error(err);
         router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/error`);
@@ -28,16 +28,15 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
   }, [docNumber, router]);
 
   if (!record) {
-    return <div className="p-6 text-sm font-mono">Loading...</div>;
+    return null;
   }
 
   return (
     <div className="w-[80mm]">
       <div className="p-6 text-sm font-mono">
-        <div className="text-center mb-2">
-          <img src="/logo.png" alt="Company Logo" className="mx-auto w-20 h-auto" />
-        </div>
+        
         <h1 className="text-center text-lg font-bold">EXCHANGE RECEIPT</h1>
+        <p className="text-center font-bold text-base">MoneyMate Currency Exchange</p>
         <p className="text-center font-bold text-base">มันนี่เมท เคอเรนซี่ เอ็กซ์เชนจ์</p>
         <p className="text-center text-xs">305 ม.10 ถ.มิตรภาพ ต.โพธิ์ชัย อ.เมือง จ.หนองคาย</p>
         <p className="text-center text-xs">0910608858 , 0642849169</p>
@@ -69,14 +68,14 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
         </table>
         <hr className="my-2" />
         <div className="text-right font-bold">TOTAL THB: {Number(record.total).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-        <div className="mt-10 flex flex-col items-center">
-          <div className="border-t border-black w-1/2" />
-          <div className="mt-2 text-sm text-center">
-            Issued by: {record.employee}
+        <div className="mt-10 text-sm">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span>Issued by: {record.employee}</span>
+            <div className="flex-1 border-t border-black ml-2" />
           </div>
-          <div className="mt-10 border-t border-black w-1/2" />
-          <div className="mt-2 text-sm text-center">
-            Customer {record.customerName}
+          <div className="flex items-center justify-between gap-2">
+            <span>Customer {record.customerName}</span>
+            <div className="flex-1 border-t border-black ml-2" />
           </div>
         </div>
         

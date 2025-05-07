@@ -134,8 +134,8 @@ function WithdrawPage() {
           },
           body: JSON.stringify({
             ...updateCashBase,
-            totalTHB: parseFloat(amount || "0"),
             currency: currency,
+            amount: parseFloat(amount || "0"),
             action: "increase",
           }),
         });
@@ -147,8 +147,8 @@ function WithdrawPage() {
           },
           body: JSON.stringify({
             ...updateCashBase,
-            totalTHB: parseFloat(fee || "0"),
             currency: feeCurrency,
+            amount: parseFloat(fee || "0"),
             action: "increase",
           }),
         });
@@ -161,8 +161,8 @@ function WithdrawPage() {
           },
           body: JSON.stringify({
             ...updateCashBase,
-            totalTHB: parseFloat(amount || "0"),
             currency: currency,
+            amount: parseFloat(amount || "0"),
             action: "decrease",
           }),
         });
@@ -174,8 +174,8 @@ function WithdrawPage() {
           },
           body: JSON.stringify({
             ...updateCashBase,
-            totalTHB: parseFloat(fee || "0"),
             currency: feeCurrency,
+            amount: parseFloat(fee || "0"),
             action: "increase",
           }),
         });

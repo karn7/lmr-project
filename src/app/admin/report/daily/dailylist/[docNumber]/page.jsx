@@ -100,6 +100,26 @@ export default function Page({ params }) {
           amount: record.total,
           action: "increase",
         });
+      } else if (record.payType === "deposit") {
+        if (record.items && record.items.length > 0) {
+          record.items.forEach((item) => {
+            updates.push({
+              currency: item.currency,
+              amount: item.total,
+              action: "decrease",
+            });
+          });
+        }
+      } else if (record.payType === "withdraw") {
+        if (record.items && record.items.length > 0) {
+          record.items.forEach((item) => {
+            updates.push({
+              currency: item.currency,
+              amount: item.total,
+              action: "increase",
+            });
+          });
+        }
       }
 
       console.log("📤 updates ที่จะส่งไป update-cash:", updates);
@@ -147,61 +167,88 @@ export default function Page({ params }) {
     setIsDeleting(true);
     try {
       const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
-      const resCheck = await fetch(`${base}/api/open-shift/check?shiftNo=${record.shiftNo}`);
+      const dateParam = record.date || new Date(record.createdAt).toISOString().slice(0, 10);
+      console.log("🔍 ตรวจสอบกะด้วยค่า:", {
+        shiftNo: record.shiftNo,
+        employee: record.employee,
+        date: dateParam,
+      });
+      const resCheck = await fetch(`${base}/api/open-shift/check?shiftNo=${record.shiftNo}&employee=${encodeURIComponent(record.employee)}&date=${encodeURIComponent(dateParam)}`);
       if (!resCheck.ok) {
         alert("เกิดข้อผิดพลาดในการตรวจสอบกะ");
         return;
       }
       const dataCheck = await resCheck.json();
+      console.log("🕵️‍♂️ ข้อมูลที่ได้จาก /api/open-shift/check:", dataCheck);
 
       let message = "";
-      if (!dataCheck.isClosed) {
+      if (dataCheck.open) {
         message = "กะยังไม่ถูกปิด จะมีการปรับยอดเงิน\n";
       } else {
         message = "กะถูกปิดแล้ว กำลังลบข้อมูลย้อนหลัง\n";
       }
       message += "คุณต้องการลบรายการนี้หรือไม่?\n\n";
 
-      // Determine the effect on balances
-      if (record.payType === "Buying" || record.payType === "Selling") {
-        const isPayCash = record.payMethod === "cash";
-        const isReceiveCash = record.receiveMethod === "cash";
+      if (dataCheck.open) {
+        // Determine the effect on balances
+        if (record.payType === "Buying" || record.payType === "Selling") {
+          const isPayCash = record.payMethod === "cash";
+          const isReceiveCash = record.receiveMethod === "cash";
 
-        if (record.payType === "Buying") {
-          if (isPayCash) {
-            message += `- เงินสด (THB) จะเพิ่มขึ้น ${record.total.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+          if (record.payType === "Buying") {
+            if (isPayCash) {
+              message += `- เงินสด (THB) จะเพิ่มขึ้น ${record.total.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+            }
+            if (record.items && record.items.length > 0) {
+              message += `- สกุลเงินในรายการจะลดลง:\n`;
+              record.items.forEach((item) => {
+                message += `  * ${item.currency}: ${item.amount.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+              });
+            }
+          } else if (record.payType === "Selling") {
+            if (isReceiveCash) {
+              message += `- เงินสด (THB) จะลดลง ${record.total.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+            }
+            if (record.items && record.items.length > 0) {
+              message += `- สกุลเงินในรายการจะเพิ่มขึ้น:\n`;
+              record.items.forEach((item) => {
+                message += `  * ${item.currency}: ${item.amount.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+              });
+            }
           }
+        } else if (record.payType === "Wechat") {
+          message += `- เงินสด (THB) จะเพิ่มขึ้น ${record.total.toLocaleString("th-TH", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}\n`;
+        } else if (record.payType === "Lottery") {
+          message += `- เงินสด (THB) จะเพิ่มขึ้น ${record.total.toLocaleString("th-TH", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}\n`;
+        } else if (record.payType === "deposit") {
           if (record.items && record.items.length > 0) {
             message += `- สกุลเงินในรายการจะลดลง:\n`;
             record.items.forEach((item) => {
-              message += `  * ${item.currency}: ${item.amount.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+              message += `  * ${item.currency}: ${item.total != null ? item.total.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}\n`;
             });
           }
-        } else if (record.payType === "Selling") {
-          if (isReceiveCash) {
-            message += `- เงินสด (THB) จะลดลง ${record.total.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
-          }
+        } else if (record.payType === "withdraw") {
           if (record.items && record.items.length > 0) {
             message += `- สกุลเงินในรายการจะเพิ่มขึ้น:\n`;
             record.items.forEach((item) => {
-              message += `  * ${item.currency}: ${item.amount.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+              message += `  * ${item.currency}: ${item.total != null ? item.total.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}\n`;
             });
           }
         }
-      } else if (record.payType === "Wechat") {
-        message += `- เงินสด (THB) จะเพิ่มขึ้น ${record.total.toLocaleString("th-TH", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}\n`;
-      } else if (record.payType === "Lottery") {
-        message += `- เงินสด (THB) จะเพิ่มขึ้น ${record.total.toLocaleString("th-TH", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}\n`;
       }
 
       if (confirm(message)) {
-        await updateCashOnDeleteOnly();
+        if (dataCheck.open) {
+          await updateCashOnDeleteOnly();
+        } else {
+          console.log("📦 ข้าม updateCashOnDeleteOnly เพราะกะถูกปิดแล้ว");
+        }
 
         const resDelete = await fetch(`${base}/api/record/delete`, {
           method: "POST",
@@ -297,9 +344,15 @@ export default function Page({ params }) {
               <tr key={index} className="even:bg-gray-50">
                 <td className="border-r border-gray-300 px-3 py-2">{item.currency}</td>
                 <td className="border-r border-gray-300 px-3 py-2">{item.unit}</td>
-                <td className="border-r border-gray-300 px-3 py-2">{item.rate.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
-                <td className="border-r border-gray-300 px-3 py-2">{item.amount.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
-                <td className="px-3 py-2">{item.total.toLocaleString("th-TH", { minimumFractionDigits: 2 })}</td>
+                <td className="border-r border-gray-300 px-3 py-2">
+                  {item.rate != null ? item.rate.toLocaleString("th-TH", { minimumFractionDigits: 2 }) : "-"}
+                </td>
+                <td className="border-r border-gray-300 px-3 py-2">
+                  {item.amount != null ? item.amount.toLocaleString("th-TH", { minimumFractionDigits: 2 }) : "-"}
+                </td>
+                <td className="px-3 py-2">
+                  {item.total != null ? item.total.toLocaleString("th-TH", { minimumFractionDigits: 2 }) : "-"}
+                </td>
               </tr>
             ))
           ) : (

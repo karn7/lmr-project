@@ -32,7 +32,7 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
   }
 
   return (
-    <div className="w-[80mm]">
+    <div className="w-[90mm]">
       <div className="p-6 text-sm font-mono">
         <div className="mb-1 text-xs">Trans No: {record.docNumber}</div>
         <div className="text-xs">Date: {new Date(record.createdAt).toLocaleString("en-US")}</div>
