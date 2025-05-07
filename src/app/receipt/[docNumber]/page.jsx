@@ -35,6 +35,12 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
     <div className="w-full flex justify-center">
       <div className="w-[90mm]">
         <div className="p-6 text-sm font-mono">
+          <h1 className="text-center text-lg font-bold">EXCHANGE RECEIPT</h1>
+          <p className="text-center font-bold text-base">MoneyMate Currency Exchange</p>
+          <p className="text-center font-bold text-base">มันนี่เมท เคอเรนซี่ เอ็กซ์เชนจ์</p>
+          <p className="text-center text-xs">305 ม.10 ถ.มิตรภาพ ต.โพธิ์ชัย อ.เมือง จ.หนองคาย</p>
+          <p className="text-center text-xs">0910608858 , 0642849169</p>
+          <p className="text-center text-xs">เลขที่ใบอนุญาต : MC425670002</p>
           <hr className="my-2" />
           <div className="mb-1 text-xs">Trans No: {record.docNumber}</div>
           <div className="text-xs">Date: {new Date(record.createdAt).toLocaleString("en-US")}</div>
