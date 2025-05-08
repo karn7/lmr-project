@@ -149,13 +149,13 @@ export default function OpenShiftPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded shadow max-w-sm w-full">
             <h2 className="text-lg font-bold mb-4">ยืนยันการเปิดร้าน</h2>
-            <ul className="mb-4 space-y-1 text-sm">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-2 text-sm mb-4">
               {Object.entries(amounts).map(([cur, val]) => (
-                <li key={cur}>
-                  {cur}: {parseFloat(val || 0).toLocaleString()}
-                </li>
+                <div key={cur}>
+                  <span className="font-medium">{cur}:</span> {parseFloat(val || 0).toLocaleString()}
+                </div>
               ))}
-            </ul>
+            </div>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setShowConfirm(false)}

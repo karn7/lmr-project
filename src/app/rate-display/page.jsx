@@ -24,7 +24,7 @@ function RateDisplayPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const priorityOrder = ["USD", "GBP", "EUR", "CHF", "AUD", "JPY", "MYR", "SGD", "HKD", "CNY"];
+  const priorityOrder = ["USD", "GBP", "EUR", "CHF", "AUD", "KRW", "JPY", "MYR", "SGD", "HKD", "CNY"];
   const sortedPostData = [...postData].sort((a, b) => {
     const aPriority = priorityOrder.indexOf(a.title);
     const bPriority = priorityOrder.indexOf(b.title);
@@ -34,7 +34,7 @@ function RateDisplayPage() {
     return a.title.localeCompare(b.title);
   });
 
-  const rowsPerPage = 34;
+  const rowsPerPage = 28;
   const [page, setPage] = useState(0);
 
   useEffect(() => {
@@ -45,7 +45,7 @@ function RateDisplayPage() {
   }, [sortedPostData]);
 
   return (
-    <div className="min-h-screen bg-white p-4">
+    <div className="min-h-screen bg-white p-4 text-3xl">
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white border border-gray-300 rounded-md">
           <thead>
@@ -82,8 +82,8 @@ function RateDisplayPage() {
                       )}
                     </td>
                     <td className="py-2 px-4 border-b text-center">{val.content}</td>
-                    <td className="py-2 px-4 border-b text-center text-green-700 font-bold text-xl">{val.buy}</td>
-                    <td className="py-2 px-4 border-b text-center text-orange-600 font-bold text-xl">{val.sell}</td>
+                    <td className="py-2 px-4 border-b text-center text-green-700 font-bold text-4xl">{val.buy}</td>
+                    <td className="py-2 px-4 border-b text-center text-orange-600 font-bold text-4xl">{val.sell}</td>
                   </tr>
                 );
               })}

@@ -91,16 +91,13 @@ function AdminPage() {
                           </button>
                           <h2 className="text-xl font-bold mb-4">ยอดเงินรวมทั้งหมด:</h2>
                           {Object.keys(totalBalance).length > 0 && (
-                            <ul className="mb-4 list-disc list-inside text-gray-800">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-2 text-gray-800 mb-4 text-sm">
                               {Object.entries(totalBalance).map(([currency, amount]) => (
-                                <li
-                                  key={currency}
-                                  className={amount < 0 ? "text-red-600" : ""}
-                                >
-                                  {currency}: {formatCurrency(amount)}
-                                </li>
+                                <div key={currency} className={amount < 0 ? "text-red-600" : ""}>
+                                  <span className="font-medium">{currency}:</span> {formatCurrency(amount)}
+                                </div>
                               ))}
-                            </ul>
+                            </div>
                           )}
                           {branchBalances.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
@@ -109,14 +106,18 @@ function AdminPage() {
                                   <h3 className="font-semibold">สาขา: {branch.branch}</h3>
                                   <p className="mb-2 font-medium">ยอดเงิน:</p>
                                   <ul className="list-disc list-inside mb-2">
-                                    {Object.entries(branch.cashBalance || {}).map(([cur, val]) => (
-                                      <li
-                                        key={cur}
-                                        className={Number(val) < 0 ? "text-red-600" : ""}
-                                      >
-                                        {cur}: {formatCurrency(typeof val === "number" ? val : Number(val))}
-                                      </li>
-                                    ))}
+                                    {Object.entries(branch.cashBalance || {}).map(([cur, val]) => {
+                                      const amount = Number(val);
+                                      if (amount === 0) return null;
+                                      return (
+                                        <li
+                                          key={cur}
+                                          className={amount < 0 ? "text-red-600" : ""}
+                                        >
+                                          {cur}: {formatCurrency(amount)}
+                                        </li>
+                                      );
+                                    })}
                                   </ul>
                                   <p>พนักงาน: {branch.employee}</p>
                                   <p>วันที่: {branch.date}</p>

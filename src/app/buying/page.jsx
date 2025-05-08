@@ -360,7 +360,7 @@ function ExchangePage() {
 
       <div className="mt-6 flex gap-6">
         {/* Flag Panel */}
-        <div className="bg-white p-1 rounded shadow flex flex-wrap gap-x-1 gap-y-1 justify-center items-start h-fit">
+        <div className="bg-white p-1 rounded shadow grid grid-cols-3 gap-2 justify-items-center items-start h-fit">
           {uniqueCurrencies.map((currency, index) => (
             <button
               key={index}
@@ -370,7 +370,7 @@ function ExchangePage() {
                   ? "ring-2 ring-yellow-300"
                   : ""
               }`}
-              style={{ padding: 0, width: "76px", height: "46px" }}
+              style={{ padding: 0, width: "76px", height: "52px" }}
             >
               <img
                 src={`/cur/${currency.title.toUpperCase()}.png`}
