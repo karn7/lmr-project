@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   await connectMongoDB();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
 
   try {
     const openShifts = await Shift.find({
