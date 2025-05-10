@@ -31,8 +31,22 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
     return null;
   }
 
+  // Reduce print margins as much as possible
+  // eslint-disable-next-line react/jsx-no-undef
   return (
-    <div className="w-full flex justify-center">
+    <>
+      <style jsx global>{`
+        @media print {
+          @page {
+            margin: 2mm;
+          }
+          body {
+            margin: 0;
+          }
+        }
+      `}</style>
+
+      <div className="w-full flex justify-center">
       <div className="w-[110mm]">
         <div className="p-6 text-sm font-mono">
           <h1 className="text-center text-lg font-bold">EXCHANGE RECEIPT</h1>
@@ -86,5 +100,6 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
         </div>
       </div>
     </div>
+    </>
   );
 }
