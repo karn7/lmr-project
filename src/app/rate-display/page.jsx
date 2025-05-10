@@ -91,7 +91,7 @@ function RateDisplayPage() {
         </table>
       </div>
 
-      <div className="mt-8 text-center text-xl leading-relaxed">
+      <div className="mt-8 text-center text-4xl leading-relaxed">
         <p className="text-red-600 font-semibold">มันนี่เมท เคอเรนซี่ เอ็กซ์เชนจ์ (ตึกไอที อัศวรรณ หนองคาย)</p>
         <p className="text-gray-700">เรารับแลกเงินมากกว่า 100 สกุล เรทดี เรทสูง แน่นอน</p>
         <p className="text-gray-700">รับแลกเงินยกเลิกใช้ เงินชำรุด ขาดมีรอยหมึก ทุกแบบ เรทตามสภาพ</p>
