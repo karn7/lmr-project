@@ -28,31 +28,31 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
   }, [docNumber, router]);
 
   if (!record) {
-    return <div className="p-6 text-sm font-mono">Loading...</div>;
+    return <div className="p-6 text-xl font-mono">Loading...</div>;
   }
 
   return (
     <div className="w-[100mm]">
-      <div className="p-6 text-sm font-mono">
-        <div className="mb-1 text-xs">Trans No: {record.docNumber}</div>
-        <div className="text-xs">Date: {new Date(record.createdAt).toLocaleString("en-US")}</div>
+      <div className="p-6 text-xl font-mono">
+        <div className="mb-1 text-xl">Trans No: {record.docNumber}</div>
+        <div className="text-xl">Date: {new Date(record.createdAt).toLocaleString("en-US")}</div>
         <hr className="my-2" />
         <table className="w-full text-left">
           <thead className="border-b border-black">
             <tr>
-              <th className="text-xs font-bold">{record?.payType || "Currency"}</th>
-              <th className="text-xs font-medium">Amount</th>
-              <th className="text-xs font-medium">Rate</th>
-              <th className="text-xs font-medium">Total</th>
+              <th className="text-xl font-bold">{record?.payType || "Currency"}</th>
+              <th className="text-xl font-medium">Amount</th>
+              <th className="text-xl font-medium">Rate</th>
+              <th className="text-xl font-medium">Total</th>
             </tr>
           </thead>
           <tbody>
             {record.items.map((item, index) => (
               <tr key={index}>
-                <td className="text-xs">{item.currency}{item.unit}</td>
-                <td className="text-xs">{Number(item.amount).toLocaleString()}</td>
-                <td className="text-xs">{Number(item.rate).toFixed(2)}</td>
-                <td className="text-xs">{Number(item.total).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                <td className="text-xl">{item.currency}{item.unit}</td>
+                <td className="text-xl">{Number(item.amount).toLocaleString()}</td>
+                <td className="text-xl">{Number(item.rate).toFixed(2)}</td>
+                <td className="text-xl">{Number(item.total).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
               </tr>
             ))}
           </tbody>

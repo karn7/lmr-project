@@ -156,19 +156,25 @@ function ReportPage() {
                     <table className="table-auto w-full border">
                       <thead>
                         <tr className="bg-gray-100">
+                          <th className="border px-4 py-2">เวลา</th>
                           <th className="border px-4 py-2">ประเภท</th>
                           <th className="border px-4 py-2">สกุลเงิน</th>
                           <th className="border px-4 py-2">จำนวนเงิน</th>
+                          <th className="border px-4 py-2">เหตุผล</th>
                         </tr>
                       </thead>
                       <tbody>
                         {group.entries.map((entry, idx) => (
                           <tr key={idx}>
+                            <td className="border px-4 py-2">
+                              {new Date(entry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </td>
                             <td className="border px-4 py-2">{entry.type === "in" ? "นำเข้า" : entry.type === "out" ? "นำออก" : "-"}</td>
                             <td className="border px-4 py-2">{entry.currency}</td>
                             <td className={`border px-4 py-2 text-right ${entry.amount < 0 ? "text-red-500" : ""}`}>
                               {Number(entry.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
+                            <td className="border px-4 py-2">{entry.reason || "-"}</td>
                           </tr>
                         ))}
                       </tbody>

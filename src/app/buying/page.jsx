@@ -372,11 +372,16 @@ function ExchangePage() {
               }`}
               style={{ padding: 0, width: "76px", height: "52px" }}
             >
-              <img
-                src={`/cur/${currency.title.toUpperCase()}.png`}
-                alt={currency.title}
-                className="w-full h-full object-cover"
-              />
+              <div className="relative w-full h-full">
+                <img
+                  src={`/cur/${currency.title.toUpperCase()}.png`}
+                  alt={currency.title}
+                  className="w-full h-full object-cover"
+                />
+                <span className="absolute bottom-0 left-0 right-0 text-center text-xs font-bold bg-black bg-opacity-50 text-white">
+                  {currency.title}
+                </span>
+              </div>
             </button>
           ))}
         </div>
