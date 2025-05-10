@@ -75,7 +75,7 @@ function ExchangePage() {
 
   const handleAddRecord = () => {
     if (!selectedCurrency || !rate || !amount) return;
-    const total = parseFloat(rate) * parseFloat(amount);
+    const total = parseFloat((parseFloat(rate) * parseFloat(amount)).toFixed(2));
     const newRecord = {
       currency: selectedCurrency.title,
       unit: selectedUnit === "-" ? "" : selectedUnit,
