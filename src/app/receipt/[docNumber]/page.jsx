@@ -47,7 +47,7 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
       `}</style>
 
       <div className="w-full flex justify-center">
-      <div className="w-[105mm]">
+      <div className="w-[100mm]">
         <div className="p-6 text-sm font-mono">
           <h1 className="text-center text-lg font-bold">EXCHANGE RECEIPT</h1>
           <p className="text-center font-bold text-base">มันนี่เมท เคอเรนซี่ เอ็กซ์เชนจ์</p>

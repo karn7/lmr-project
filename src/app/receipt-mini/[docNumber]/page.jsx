@@ -31,9 +31,21 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
     return <div className="p-6 text-xl font-mono">Loading...</div>;
   }
 
+  <style jsx global>{`
+    @media print {
+      @page {
+        margin: 1mm;
+      }
+      body {
+        margin: 0;
+      }
+    }
+  `}</style>
+
   return (
-    <div className="w-[110mm]">
-      <div className="p-6 text-xl font-mono">
+    <div className="w-full flex justify-center">
+      <div className="w-[100mm]">
+        <div className="p-6 text-xl font-mono">
         <div className="mb-1 text-xl">Trans No: {record.docNumber}</div>
         <div className="text-xl">Date: {new Date(record.createdAt).toLocaleString("en-US")}</div>
         <hr className="my-2" />
@@ -61,5 +73,6 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
         <div className="text-right font-bold">TOTAL THB: {Number(record.total).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
       </div>
     </div>
+  </div>
   );
 }
