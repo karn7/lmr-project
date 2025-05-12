@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import AdminNav from '../components/AdminNav'
 import Container from '../components/Container'
 import Footer from '../components/Footer'
@@ -14,6 +14,7 @@ function AdminPage() {
     const { data: session } = useSession();
     const [branchBalances, setBranchBalances] = useState([]);
     const [totalBalance, setTotalBalance] = useState({});
+    const wasPopupOpen = useRef(false);
 
     const formatCurrency = (amount) => {
       const formatted = amount.toLocaleString(undefined, {
@@ -88,6 +89,24 @@ function AdminPage() {
                             className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                           >
                             🔄 รีเฟรชข้อมูล
+                          </button>
+                          <button
+                            onClick={() => {
+                              const win = window.open(
+                                "/admin/shift-adjust",
+                                "_blank",
+                                "width=800,height=600"
+                              );
+                              const timer = setInterval(() => {
+                                if (win.closed) {
+                                  clearInterval(timer);
+                                  refreshBalances();
+                                }
+                              }, 500);
+                            }}
+                            className="ml-2 inline-block px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                          >
+                            ✏️ ปรับยอดเงินกะ
                           </button>
                           <h2 className="text-xl font-bold mb-4">ยอดเงินรวมทั้งหมด:</h2>
                           {Object.keys(totalBalance).length > 0 && (

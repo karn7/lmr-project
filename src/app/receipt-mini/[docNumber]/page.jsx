@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -28,7 +29,7 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
   }, [docNumber, router]);
 
   if (!record) {
-    return <div className="p-6 text-base font-mono">Loading...</div>;
+    return <div className="p-6 text-xs font-mono">Loading...</div>;
   }
 
   <style jsx global>{`
@@ -44,33 +45,59 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
 
   return (
     <div className="w-full flex justify-center">
-      <div className="w-[90mm]">
-        <div className="p-6 text-base font-mono">
-        <div className="mb-1 text-base">Trans No: {record.docNumber}</div>
-        <div className="text-base">Date: {new Date(record.createdAt).toLocaleString("en-US")}</div>
+      <div className="w-[95mm]">
+        <div className="p-6 text-xs font-mono">
+        <div className="mb-1 text-xs">Trans No: {record.docNumber}</div>
+        <div className="text-xs">Date: {new Date(record.createdAt).toLocaleString("en-US")}</div>
         <hr className="my-2" />
-        <table className="w-full text-left">
+        <table className="w-full text-left mb-1">
           <thead className="border-b border-black">
             <tr>
-              <th className="text-base font-bold">{record?.payType || "Currency"}</th>
-              <th className="text-base font-medium">Amount</th>
-              <th className="text-base font-medium">Rate</th>
-              <th className="text-base font-medium">Total</th>
+              <th className="text-xs font-medium">{record?.payType || ""}</th>
+              <th className="text-xs font-medium">Amount</th>
+              <th className="text-xs font-medium">Rate</th>
+              <th className="text-xs font-medium">Total</th>
             </tr>
           </thead>
           <tbody>
-            {record.items.map((item, index) => (
-              <tr key={index}>
-                <td className="text-base">{item.currency}{item.unit}</td>
-                <td className="text-base">{Number(item.amount).toLocaleString()}</td>
-                <td className="text-base">{Number(item.rate).toFixed(2)}</td>
-                <td className="text-base">{Number(item.total).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-              </tr>
-            ))}
+            {Object.entries(
+              record.items.reduce((acc, item) => {
+                if (!acc[item.currency]) acc[item.currency] = [];
+                acc[item.currency].push(item);
+                return acc;
+              }, {})
+            ).map(([currency, items]) => {
+              const groupTotal = items.reduce((sum, i) => sum + parseFloat(i.amount), 0);
+              return (
+                <React.Fragment key={currency}>
+                  {items.map((item, idx) => (
+                    <tr key={idx}>
+                      <td className="text-xs">{item.currency}{item.unit}</td>
+                      <td className="text-xs">{Number(item.amount).toLocaleString()}</td>
+                      <td className="text-xs break-all max-w-[60px]">{item.rate}</td>
+                      <td className="text-xs">{Number(item.total).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                  {!["deposit", "withdraw"].includes(record?.payType) && (
+                    <tr>
+                      <td colSpan="4" className="text-xs font-bold">
+                        {currency} = {groupTotal.toLocaleString()}
+                      </td>
+                    </tr>
+                  )}
+                  <tr>
+                    <td colSpan="4"><hr className="my-2" /></td>
+                  </tr>
+                </React.Fragment>
+              );
+            })}
           </tbody>
         </table>
-        <hr className="my-2" />
-        <div className="text-right font-bold">TOTAL THB: {Number(record.total).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+        {!["deposit", "withdraw"].includes(record?.payType) && (
+          <div className="text-left font-bold">
+            TOTAL THB: {Number(record.total).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+          </div>
+        )}
       </div>
     </div>
   </div>
