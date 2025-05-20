@@ -1,3 +1,4 @@
+"export const dynamic = \"force-dynamic\";"
 "use client"
 import { useRouter } from 'next/navigation';
 
@@ -40,7 +41,7 @@ function ReportPage() {
     }, [showDailyReport]);
 
     useEffect(() => {
-      fetch(`${basePath}/api/shifts`, { cache: "no-store" })
+      fetch(`${basePath}/api/shifts?ts=${Date.now()}`, { cache: "no-store" })
         .then((res) => res.json())
         .then((data) => {
           setShifts(data.shifts || []);

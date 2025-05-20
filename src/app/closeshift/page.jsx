@@ -14,6 +14,7 @@ export default function CloseShiftPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [summary, setSummary] = useState(null);
   const [shiftInfo, setShiftInfo] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchShift = async () => {
@@ -57,6 +58,7 @@ export default function CloseShiftPage() {
   };
 
   const confirmCloseShift = async () => {
+    setSubmitting(true);
     try {
       const today = new Date().toISOString().slice(0, 10);
       const resCheck = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/check?employee=${session?.user?.name}`);
@@ -104,6 +106,8 @@ export default function CloseShiftPage() {
     } catch (err) {
       console.error("Error closing shift:", err);
       alert("เกิดข้อผิดพลาดในการส่งข้อมูล");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -170,9 +174,12 @@ export default function CloseShiftPage() {
               </button>
               <button
                 onClick={confirmCloseShift}
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                disabled={submitting}
+                className={`px-4 py-2 rounded text-white ${
+                  submitting ? "bg-gray-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
+                }`}
               >
-                ยืนยันการปิดร้าน
+                {submitting ? "กำลังบันทึก..." : "ยืนยันการปิดร้าน"}
               </button>
             </div>
           </div>
