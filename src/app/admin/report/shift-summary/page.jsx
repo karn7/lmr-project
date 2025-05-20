@@ -28,7 +28,7 @@ function ReportPage() {
     useEffect(() => {
       if (showDailyReport) {
         // fetch records
-        fetch(`${basePath}/api/record`)
+        fetch(`${basePath}/api/record`, { cache: "no-store" })
           .then((res) => res.json())
           .then((data) => {
             setRecords(data.records);
@@ -40,7 +40,7 @@ function ReportPage() {
     }, [showDailyReport]);
 
     useEffect(() => {
-      fetch(`${basePath}/api/shifts`)
+      fetch(`${basePath}/api/shifts`, { cache: "no-store" })
         .then((res) => res.json())
         .then((data) => {
           setShifts(data.shifts || []);
