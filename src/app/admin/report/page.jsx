@@ -96,6 +96,12 @@ function ReportPage() {
                   รายงานประจำวัน
                 </button>
                 <button
+                  onClick={() => router.push(`${basePath}/admin/report/report-by-date`)}
+                  className="bg-gray-400 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded"
+                >
+                  พิมพ์รายงานประจำวัน
+                </button>
+                <button
                   onClick={() => router.push(`${basePath}/admin/report/cash-drawer`)}
                   className="bg-gray-400 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded"
                 >

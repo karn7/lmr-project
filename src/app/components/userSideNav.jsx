@@ -71,6 +71,11 @@ function SideNav() {
             Rate Display
           </a>
         </li>
+        <li>
+          <Link className='block my-3 p-3 rounded-lg' href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/userreport`}>
+            Report
+          </Link>
+        </li>
         {isOpen === true && (
           <li>
             <Link className='block my-3 p-3 rounded-lg bg-red-500 text-white text-center' href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/closeshift`}>
