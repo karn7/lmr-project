@@ -39,9 +39,10 @@ function UserreportPage() {
 
   const [postData, setPostData] = useState([]);
   const [records, setRecords] = useState([]);
+  const [availablePayTypes, setAvailablePayTypes] = useState([]);
 
   const [selectedDate, setSelectedDate] = useState("");
-  const [selectedPayType, setSelectedPayType] = useState("Buying");
+  const [selectedPayType, setSelectedPayType] = useState("ทั้งหมด");
   const [loading, setLoading] = useState(false);
 
   const userEmail = session?.user?.email;
@@ -73,9 +74,13 @@ function UserreportPage() {
       const query = new URLSearchParams({
         start: selectedDate,
         end: selectedDate,
-        payType: selectedPayType,
-        employee: session?.user?.name || "",
       });
+      if (selectedPayType !== "ทั้งหมด") {
+        query.set("payType", selectedPayType);
+      }
+      // 📌 Log employee name used for filtering
+      console.log("📌 ชื่อพนักงานที่ใช้กรองข้อมูล:", session?.user?.name);
+      query.set("employee", session?.user?.name || "");
       const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/items-by-date?${query.toString()}`, {
         cache: "no-store",
       });
@@ -84,9 +89,13 @@ function UserreportPage() {
       }
       const data = await res.json();
       setRecords(data.records || []);
+      // ดึง availablePayTypes ทั้งหมดจากข้อมูล API โดยไม่กรองตาม session.user.name
+      const allTypes = data.records.flatMap(group => group.items.map(item => item.payType));
+      setAvailablePayTypes(Array.from(new Set(allTypes)));
     } catch (error) {
       console.log("Error loading records: ", error);
       setRecords([]);
+      setAvailablePayTypes([]);
     }
     setLoading(false);
   };
@@ -94,6 +103,13 @@ function UserreportPage() {
   useEffect(() => {
     getPosts();
   }, []);
+
+  useEffect(() => {
+    if (selectedDate) {
+      fetchRecords();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, selectedPayType]);
 
   const today = new Date();
   const maxDate = today.toISOString().split("T")[0];
@@ -124,34 +140,20 @@ function UserreportPage() {
                   />
                 </label>
                 <label className="mr-4">
-                  <input
-                    type="radio"
-                    name="payType"
-                    value="Buying"
-                    checked={selectedPayType === "Buying"}
-                    onChange={() => setSelectedPayType("Buying")}
-                    className="mr-1"
-                  />
-                  Buying
+                  <select
+                    value={selectedPayType}
+                    onChange={(e) => setSelectedPayType(e.target.value)}
+                    className="border rounded px-2 py-1"
+                  >
+                    <option value="ทั้งหมด">ทั้งหมด</option>
+                    {availablePayTypes.map((payType) => (
+                      <option key={payType} value={payType}>
+                        {payType}
+                      </option>
+                    ))}
+                  </select>
                 </label>
-                <label className="mr-4">
-                  <input
-                    type="radio"
-                    name="payType"
-                    value="Selling"
-                    checked={selectedPayType === "Selling"}
-                    onChange={() => setSelectedPayType("Selling")}
-                    className="mr-1"
-                  />
-                  Selling
-                </label>
-                <button
-                  onClick={fetchRecords}
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                  disabled={loading}
-                >
-                  {loading ? "กำลังโหลด..." : "ดึงข้อมูล"}
-                </button>
+                {/* ปุ่ม "ดึงข้อมูล" ถูกลบออก */}
               </div>
               <div className="mt-6 overflow-x-auto">
                 {records.length > 0 ? (
@@ -174,28 +176,27 @@ function UserreportPage() {
                             </td>
                           </tr>
                           {recordGroup.items
-                            .filter((record) => record.employee === session.user.name)
                             .map((record, index) => (
-                            <tr key={index} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                              <td className="border px-4 py-2">{record.docNumber}</td>
-                              <td className="border px-4 py-2">{record.currency}</td>
-                              <td className="border px-4 py-2">
-                                {typeof record.amount === "number"
-                                  ? record.amount.toLocaleString()
-                                  : record.amount}
-                              </td>
-                              <td className="border px-4 py-2">
-                                {typeof record.rate === "number"
-                                  ? record.rate.toLocaleString()
-                                  : record.rate}
-                              </td>
-                              <td className="border px-4 py-2">
-                                {typeof record.total === "number"
-                                  ? record.total.toLocaleString()
-                                  : record.total}
-                              </td>
-                            </tr>
-                          ))}
+                              <tr key={index} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                                <td className="border px-4 py-2">{record.docNumber}</td>
+                                <td className="border px-4 py-2">{record.currency}</td>
+                                <td className="border px-4 py-2">
+                                  {typeof record.amount === "number"
+                                    ? record.amount.toLocaleString()
+                                    : record.amount}
+                                </td>
+                                <td className="border px-4 py-2">
+                                  {typeof record.rate === "number"
+                                    ? record.rate.toLocaleString()
+                                    : record.rate}
+                                </td>
+                                <td className="border px-4 py-2">
+                                  {typeof record.total === "number"
+                                    ? record.total.toLocaleString()
+                                    : record.total}
+                                </td>
+                              </tr>
+                            ))}
                         </React.Fragment>
                       ))}
                     </tbody>

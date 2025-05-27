@@ -10,6 +10,7 @@ export async function GET(req) {
     const end = searchParams.get("end");
     const payTypeParam = searchParams.get("payType");
     const payTypes = payTypeParam ? payTypeParam.split(",") : [];
+    const employeeParam = searchParams.get("employee");
 
     if (!start || !end) {
       return NextResponse.json({ error: "Missing start or end date" }, { status: 400 });
@@ -29,6 +30,10 @@ export async function GET(req) {
       query.payType = { $in: payTypes };
     }
 
+    if (employeeParam) {
+      query.employee = employeeParam;
+    }
+
     const records = await Record.find(query).sort({ createdAt: 1 });
 
     const grouped = {};
@@ -43,6 +48,8 @@ export async function GET(req) {
           amount: item.amount,
           rate: item.rate,
           total: item.total,
+          employee: item.employee,
+          payType: rec.payType,
         });
       });
     });
