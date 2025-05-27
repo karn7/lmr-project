@@ -11,7 +11,13 @@ export async function GET() {
     const shifts = await Shift.find().sort({ createdAt: -1 });
     console.log("✅ Shifts fetched:", shifts.length);
 
-    return NextResponse.json({ shifts }, { status: 200 });
+    return new NextResponse(JSON.stringify({ shifts }), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      }
+    });
   } catch (err) {
     console.error("❌ Error fetching shifts:", err);
     return NextResponse.json({ message: "Failed to fetch shifts", error: err.message }, { status: 500 });

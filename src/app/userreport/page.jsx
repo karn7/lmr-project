@@ -74,6 +74,7 @@ function UserreportPage() {
         start: selectedDate,
         end: selectedDate,
         payType: selectedPayType,
+        employee: session?.user?.name || "",
       });
       const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/items-by-date?${query.toString()}`, {
         cache: "no-store",
@@ -172,7 +173,9 @@ function UserreportPage() {
                               วันที่: {recordGroup.date}
                             </td>
                           </tr>
-                          {recordGroup.items && recordGroup.items.map((record, index) => (
+                          {recordGroup.items
+                            .filter((record) => record.employee === session.user.name)
+                            .map((record, index) => (
                             <tr key={index} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                               <td className="border px-4 py-2">{record.docNumber}</td>
                               <td className="border px-4 py-2">{record.currency}</td>
