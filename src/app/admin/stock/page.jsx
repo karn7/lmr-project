@@ -1,0 +1,322 @@
+"use client"
+
+import React, { useState, useEffect } from 'react'
+import AdminNav from '../components/AdminNav'
+import Footer from '../components/Footer'
+import SideNav from '../components/SideNav'
+
+import { useSession, signOut } from 'next-auth/react'
+import { redirect } from 'next/navigation'
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
+function AdminPage() {
+
+    const { data: session } = useSession();
+    
+    const [branches, setBranches] = useState([]);
+    const [selectedBranch, setSelectedBranch] = useState("");
+    const [calculatedStock, setCalculatedStock] = useState([]);
+    const [showStockTable, setShowStockTable] = useState(false);
+    const [currencyTitles, setCurrencyTitles] = useState([]);
+    const [alreadyCalculated, setAlreadyCalculated] = useState(false);
+
+    const today = new Date().toISOString().split("T")[0];
+    const [selectedDateForDailyStock, setSelectedDateForDailyStock] = useState({
+      start: "",
+      end: "",
+    });
+
+    useEffect(() => {
+      if (!selectedBranch) return;
+
+      fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/dailystocks/check?branch=${selectedBranch}&date=${today}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setAlreadyCalculated(data.exists); // สมมุติว่า API ส่งกลับ { exists: true/false }
+        });
+    }, [selectedBranch]);
+
+    const handleCalculateStock = async () => {
+      if (alreadyCalculated) {
+        alert("ข้อมูลถูกบันทึกลงสต๊อกแล้ว");
+        return;
+      }
+      // ดึงเฉพาะข้อมูลจาก /api/stock-diff-today
+      const inOutRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/stock-diff-today`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ branch: selectedBranch, date: today }),
+      });
+      const inOutJson = await inOutRes.json();
+
+      // ดึง averageRate จาก /api/average-rate-today
+      const rateRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/average-rate-today`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ branch: selectedBranch, date: today }),
+      });
+      const rateJson = await rateRes.json();
+      const rateMap = new Map((rateJson.data || []).map(item => [item.currency, item.averageRate]));
+
+      // map currencyTitles ทั้งหมด และรวมข้อมูล inOutJson.data + averageRate
+      const mergedStock = currencyTitles.map(({ title }) => {
+        const inOutItem = (inOutJson.data || []).find((i) => i.currency === title) || {};
+        return {
+          currency: title,
+          carryOver: 0,
+          inOutTotal: inOutItem.inOutTotal ?? 0,
+          averageRate: rateMap.get(title) ?? 0
+        };
+      });
+      setCalculatedStock(mergedStock);
+      console.log("📊 ข้อมูล mergedStock:", mergedStock);
+      setShowStockTable(true);
+    };
+
+    useEffect(() => {
+      if (!session) {
+        redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`);
+      } else if (session?.user?.role !== "admin") {
+        redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/welcome`);
+      } else if (session?.user?.lastLoginDate) {
+        const last = new Date(session.user.lastLoginDate);
+        const now = new Date();
+
+        const isNewDay = last.getFullYear() !== now.getFullYear()
+                      || last.getMonth() !== now.getMonth()
+                      || last.getDate() !== now.getDate();
+
+        if (isNewDay) {
+          alert("เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่");
+          signOut();
+        }
+      }
+    }, [session]);
+
+    useEffect(() => {
+      fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/record`)
+        .then((res) => res.json())
+        .then((data) => {
+          const allBranches = Array.from(new Set(data.records.map((r) => r.branch)));
+          setBranches(allBranches);
+        });
+    }, []);
+
+    useEffect(() => {
+      fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/posts`)
+        .then((res) => res.json())
+        .then((data) => {
+          const uniqueTitles = [];
+          const seen = new Set();
+          for (const post of data.posts || []) {
+            if (
+              !seen.has(post.title) &&
+              post.title !== "บาท" &&
+              post.title !== "THB"
+            ) {
+              seen.add(post.title);
+              uniqueTitles.push(post);
+            }
+          }
+          setCurrencyTitles(uniqueTitles);
+        });
+    }, []);
+
+  // Create a map for quick lookup: currency → stock
+  const stockMap = new Map(calculatedStock.map((item) => [item.currency, item]));
+
+  // ฟังก์ชันสำหรับสร้าง PDF รายงานสต๊อก
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text(`รายงานสต๊อกรายวัน (${selectedBranch})`, 105, 15, { align: "center" });
+
+    autoTable(doc, {
+      startY: 25,
+      head: [["สกุลเงิน", "ยอดยกมา", "เข้า/ออกวันนี้", "รวมทั้งหมด", "เรทเฉลี่ย"]],
+      body: currencyTitles.map((post) => {
+        const stock = stockMap.get(post.title) || {};
+        const carry = stock.carryOver ?? 0;
+        const inout = stock.inOutTotal ?? 0;
+        const rate = stock.averageRate ?? 0;
+        return [post.title, carry, inout, carry + inout, rate];
+      }),
+    });
+
+    doc.save(`DailyStock-${selectedBranch}-${today}.pdf`);
+  };
+
+  // ฟังก์ชันบันทึกข้อมูลสต๊อกทีละรายการ
+  const handleSaveStock = async () => {
+    const payload = {
+      date: today,
+      branch: selectedBranch,
+      items: calculatedStock.map((stock) => ({
+        currency: stock.currency,
+        carryOver: stock.carryOver,
+        inOutTotal: stock.inOutTotal,
+        averageRate: stock.averageRate,
+        actual: stock.carryOver + stock.inOutTotal,
+        difference: null,
+        finalized: false
+      })),
+      createdBy: session?.user?.name || "unknown"
+    };
+
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/dailystocks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await res.json();
+    console.log("📦 บันทึกข้อมูลแล้ว:", result);
+    alert("บันทึกข้อมูลเรียบร้อยแล้ว");
+    window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin`;
+  };
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <AdminNav session={session} />
+      <div className='flex-grow'>
+        <div className='container mx-auto'>
+          <div className='flex justify-between mt-10'>
+            <SideNav />
+            <div className="flex-grow border rounded-lg p-4 bg-white shadow-sm mb-6 w-full">
+              <div className="flex space-x-4 mt-2 ml-2">
+                <select
+                  className="px-4 py-2 border rounded bg-white text-gray-700"
+                  value={selectedBranch}
+                  onChange={(e) => setSelectedBranch(e.target.value)}
+                >
+                  <option value="">-- เลือกสาขา --</option>
+                  {branches.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleCalculateStock}
+                  disabled={!selectedBranch}
+                  className={`${
+                    selectedBranch ? "bg-blue-500 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"
+                  } text-white font-bold py-2 px-4 rounded`}
+                >
+                  คำนวณสต๊อก
+                </button>
+                <button
+                  disabled={!selectedBranch}
+                  className={`${
+                    selectedBranch ? "bg-green-500 hover:bg-green-700" : "bg-gray-400 cursor-not-allowed"
+                  } text-white font-bold py-2 px-4 rounded`}
+                  onClick={generatePDF}
+                >
+                  ดูสต๊อกปัจจุบัน
+                </button>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="date"
+                    value={selectedDateForDailyStock.start || ""}
+                    onChange={(e) =>
+                      setSelectedDateForDailyStock((prev) => ({
+                        ...prev,
+                        start: e.target.value,
+                      }))
+                    }
+                    className="border rounded px-2 py-1"
+                    disabled={!selectedBranch}
+                  />
+                  <span>ถึง</span>
+                  <input
+                    type="date"
+                    value={selectedDateForDailyStock.end || ""}
+                    onChange={(e) =>
+                      setSelectedDateForDailyStock((prev) => ({
+                        ...prev,
+                        end: e.target.value,
+                      }))
+                    }
+                    className="border rounded px-2 py-1"
+                    disabled={!selectedBranch}
+                  />
+                  <button
+                    disabled={
+                      !selectedBranch ||
+                      !selectedDateForDailyStock.start ||
+                      !selectedDateForDailyStock.end
+                    }
+                    className={`${
+                      selectedBranch && selectedDateForDailyStock.start && selectedDateForDailyStock.end
+                        ? "bg-green-500 hover:bg-green-700"
+                        : "bg-gray-400 cursor-not-allowed"
+                    } text-white font-bold py-2 px-4 rounded`}
+                    onClick={() => {
+                      const url = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/dailystocks/pdf?branch=${selectedBranch}&start=${selectedDateForDailyStock.start}&end=${selectedDateForDailyStock.end}`;
+                      fetch(url)
+                        .then((res) => res.blob())
+                        .then((blob) => {
+                          const blobUrl = window.URL.createObjectURL(blob);
+                          const link = document.createElement("a");
+                          link.href = blobUrl;
+                          link.download = `DailyStock-${selectedBranch}-${selectedDateForDailyStock.start}_to_${selectedDateForDailyStock.end}.pdf`;
+                          link.click();
+                          window.URL.revokeObjectURL(blobUrl);
+                        });
+                    }}
+                  >
+                    ดูสต๊อกรายวัน
+                  </button>
+                </div>
+              </div>
+              {showStockTable && (
+                <div className="mt-6">
+                  <div className="mb-4">
+                    <button
+                      onClick={handleSaveStock}
+                      className="bg-purple-600 hover:bg-purple-800 text-white font-bold py-2 px-4 rounded"
+                    >
+                      บันทึกข้อมูล
+                    </button>
+                  </div>
+                  <table className="min-w-full border border-gray-300 text-sm">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="border px-4 py-2">สกุลเงิน</th>
+                        <th className="border px-4 py-2">ยอดยกมา</th>
+                        <th className="border px-4 py-2">เข้า/ออกวันนี้</th>
+                        <th className="border px-4 py-2">รวมทั้งหมด</th>
+                        <th className="border px-4 py-2">เรทเฉลี่ย</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {currencyTitles.map((post, index) => (
+                        <tr key={index}>
+                          <td className="border px-4 py-2">{post.title}</td>
+                          <td className="border px-4 py-2">
+                            {stockMap.get(post.title)?.carryOver ?? 0}
+                          </td>
+                          <td className="border px-4 py-2">
+                            {stockMap.get(post.title)?.inOutTotal ?? 0}
+                          </td>
+                          <td className="border px-4 py-2">
+                            {(stockMap.get(post.title)?.carryOver ?? 0) + (stockMap.get(post.title)?.inOutTotal ?? 0)}
+                          </td>
+                          <td className="border px-4 py-2">
+                            {stockMap.get(post.title)?.averageRate ?? 0}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+      <Footer />
+    </div>
+  )
+}
+
+export default AdminPage
