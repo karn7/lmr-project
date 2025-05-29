@@ -16,7 +16,7 @@ function ReportPage() {
     const router = useRouter();
     const [records, setRecords] = useState([]);
     const [shifts, setShifts] = useState([]);
-    const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
+    const [selectedDate, setSelectedDate] = useState("");
     const [selectedBranch, setSelectedBranch] = useState("ทั้งหมด");
     const [selectedEmployee, setSelectedEmployee] = useState("ทั้งหมด");
     const [selectedType, setSelectedType] = useState("ทั้งหมด");
@@ -25,6 +25,11 @@ function ReportPage() {
     const [types, setTypes] = useState([]);
     const [showDailyReport, setShowDailyReport] = useState(false);
     const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
+    useEffect(() => {
+      const today = new Date().toISOString().split("T")[0];
+      setSelectedDate(today);
+    }, []);
     
     useEffect(() => {
       if (showDailyReport) {
