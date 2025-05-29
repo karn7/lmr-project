@@ -147,6 +147,29 @@ function AdminPage() {
     doc.save(`DailyStock-${selectedBranch}-${today}.pdf`);
   };
 
+  // ฟังก์ชันสำหรับสร้าง PDF รายงานสต๊อกรายวันช่วงวันที่เลือก โดยไม่ใช้ API
+  const generateDailyStockPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text(`Daily Stock Report: ${selectedBranch}`, 105, 15, { align: "center" });
+    doc.text(`From: ${selectedDateForDailyStock.start} To: ${selectedDateForDailyStock.end}`, 105, 25, { align: "center" });
+
+    autoTable(doc, {
+      startY: 35,
+      head: [["Currency", "Carry Over", "In/Out", "Total", "Average Rate"]],
+      body: currencyTitles.map((post) => {
+        const stock = stockMap.get(post.title) || {};
+        const carry = stock.carryOver ?? 0;
+        const inout = stock.inOutTotal ?? 0;
+        const rate = stock.averageRate ?? 0;
+        return [post.title, carry, inout, carry + inout, rate];
+      }),
+    });
+
+    const filename = `DailyStock-${selectedBranch}-${selectedDateForDailyStock.start}_to_${selectedDateForDailyStock.end}.pdf`;
+    doc.save(filename);
+  };
+
   // ฟังก์ชันบันทึกข้อมูลสต๊อกทีละรายการ
   const handleSaveStock = async () => {
     const payload = {
@@ -250,19 +273,7 @@ function AdminPage() {
                         ? "bg-green-500 hover:bg-green-700"
                         : "bg-gray-400 cursor-not-allowed"
                     } text-white font-bold py-2 px-4 rounded`}
-                    onClick={() => {
-                      const url = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/dailystocks/pdf?branch=${selectedBranch}&start=${selectedDateForDailyStock.start}&end=${selectedDateForDailyStock.end}`;
-                      fetch(url)
-                        .then((res) => res.blob())
-                        .then((blob) => {
-                          const blobUrl = window.URL.createObjectURL(blob);
-                          const link = document.createElement("a");
-                          link.href = blobUrl;
-                          link.download = `DailyStock-${selectedBranch}-${selectedDateForDailyStock.start}_to_${selectedDateForDailyStock.end}.pdf`;
-                          link.click();
-                          window.URL.revokeObjectURL(blobUrl);
-                        });
-                    }}
+                    onClick={generateDailyStockPDF}
                   >
                     ดูสต๊อกรายวัน
                   </button>

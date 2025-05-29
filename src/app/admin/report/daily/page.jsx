@@ -202,6 +202,8 @@ function ReportPage() {
                     <th className="p-2 border cursor-pointer" onClick={() => handleSort('payType')}>
                       ประเภท {sortKey === 'payType' && (sortOrder === 'asc' ? '▲' : '▼')}
                     </th>
+                    <th className="p-2 border">ลูกค้าจ่าย</th>
+                    <th className="p-2 border">ลูกค้ารับ</th>
                     <th className="p-2 border cursor-pointer" onClick={() => handleSort('total')}>
                       ยอดรวม {sortKey === 'total' && (sortOrder === 'asc' ? '▲' : '▼')}
                     </th>
@@ -220,6 +222,8 @@ function ReportPage() {
                       <td className="p-2 border">{r.docNumber}</td>
                       <td className="p-2 border">{new Date(r.createdAt).toLocaleTimeString()}</td>
                       <td className="p-2 border">{r.payType}</td>
+                      <td className="p-2 border">{r.payMethod}</td>
+                      <td className="p-2 border">{r.receiveMethod}</td>
                       <td className="p-2 border">{r.total.toLocaleString()}</td>
                       <td className="p-2 border">{r.branch}</td>
                       <td className="p-2 border">{r.employee}</td>
