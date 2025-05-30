@@ -9,6 +9,8 @@ export default function Page({ params }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editableRecord, setEditableRecord] = useState(null);
   const router = useRouter();
   const cashUpdated = useRef(false);
 
@@ -27,6 +29,9 @@ export default function Page({ params }) {
         }
         const data = await res.json();
         setRecord(data.record);
+        // reset editing state if record changes
+        setIsEditing(false);
+        setEditableRecord(null);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -72,6 +77,40 @@ export default function Page({ params }) {
           });
         }
       } else if (record.payType === "Selling") {
+        if (record.receiveMethod === "cash") {
+          updates.push({
+            currency: "THB",
+            amount: record.total,
+            action: "decrease",
+          });
+        }
+        if (record.items && record.items.length > 0) {
+          record.items.forEach((item) => {
+            updates.push({
+              currency: item.currency,
+              amount: item.amount,
+              action: "increase",
+            });
+          });
+        }
+      } else if (record.payType === "NP(B)") {
+        if (record.payMethod === "cash") {
+          updates.push({
+            currency: "THB",
+            amount: record.total,
+            action: "increase",
+          });
+        }
+        if (record.items && record.items.length > 0) {
+          record.items.forEach((item) => {
+            updates.push({
+              currency: item.currency,
+              amount: item.amount,
+              action: "decrease",
+            });
+          });
+        }
+      } else if (record.payType === "NP(S)") {
         if (record.receiveMethod === "cash") {
           updates.push({
             currency: "THB",
@@ -162,6 +201,26 @@ export default function Page({ params }) {
   };
   const formattedDate = new Date(record.createdAt).toLocaleString("th-TH", options).replace(",", " เวลา");
 
+  // For editing: derive timeOnly string from createdAt
+  function getTimeOnly(dateStr) {
+    const d = new Date(dateStr);
+    const h = d.getHours().toString().padStart(2, "0");
+    const m = d.getMinutes().toString().padStart(2, "0");
+    return `${h}:${m}`;
+  }
+
+  // PayType options for editing
+  const payTypeOptions = [
+    "Buying",
+    "Selling",
+    "NP(B)",
+    "NP(S)",
+    "Wechat",
+    "Lottery",
+    "deposit",
+    "withdraw"
+  ];
+
   const handleDelete = async () => {
     if (isDeleting) return;
     setIsDeleting(true);
@@ -215,6 +274,26 @@ export default function Page({ params }) {
                 message += `  * ${item.currency}: ${item.amount.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
               });
             }
+          }
+        } else if (record.payType === "NP(B)") {
+          if (record.payMethod === "cash") {
+            message += `- เงินสด (THB) จะเพิ่มขึ้น ${record.total.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+          }
+          if (record.items && record.items.length > 0) {
+            message += `- สกุลเงินในรายการจะลดลง:\n`;
+            record.items.forEach((item) => {
+              message += `  * ${item.currency}: ${item.amount.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+            });
+          }
+        } else if (record.payType === "NP(S)") {
+          if (record.receiveMethod === "cash") {
+            message += `- เงินสด (THB) จะลดลง ${record.total.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+          }
+          if (record.items && record.items.length > 0) {
+            message += `- สกุลเงินในรายการจะเพิ่มขึ้น:\n`;
+            record.items.forEach((item) => {
+              message += `  * ${item.currency}: ${item.amount.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+            });
           }
         } else if (record.payType === "Wechat") {
           message += `- เงินสด (THB) จะเพิ่มขึ้น ${record.total.toLocaleString("th-TH", {
@@ -270,6 +349,96 @@ export default function Page({ params }) {
     }
   };
 
+  // Handler for entering edit mode
+  function handleEditClick() {
+    // Deep clone and add timeOnly field, include _id
+    setEditableRecord({
+      ...record,
+      _id: record._id,
+      // For timeOnly, use createdAt
+      timeOnly: getTimeOnly(record.createdAt),
+      // Deep clone items for safety, support add if no items
+      items:
+        record.items && record.items.length > 0
+          ? record.items.map((item) => ({ ...item }))
+          : [
+              {
+                currency: "",
+                unit: "",
+                rate: "",
+                amount: "",
+                total: "",
+              },
+            ],
+    });
+    setIsEditing(true);
+  }
+
+  // Handler for cancel edit
+  function handleCancelEdit() {
+    setIsEditing(false);
+    setEditableRecord(null);
+  }
+
+  // Handler for save edit
+  async function handleSaveEdit() {
+    try {
+      // Recalculate totals, ensure amount, rate, total are numeric and total is rounded to 2 decimal places
+      let newTotal = 0;
+      const updatedItems = editableRecord.items.map((item) => {
+        const amount = parseFloat(item.amount) || 0;
+        const rate = parseFloat(item.rate) || 0;
+        const total = parseFloat((amount * rate).toFixed(2));
+        newTotal += total;
+        return { ...item, amount, rate, total };
+      });
+      const updatedRecord = {
+        ...editableRecord,
+        items: updatedItems,
+        total: newTotal,
+      };
+      const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+      // Compose payload
+      const payload = {
+        _id: updatedRecord._id,
+        docNumber: updatedRecord.docNumber,
+        payType: updatedRecord.payType,
+        createdAt: updatedRecord.createdAt,
+        items: updatedRecord.items,
+        total: updatedRecord.total,
+      };
+      console.log("📤 payload ที่จะส่ง:", payload);
+      const res = await fetch(`${base}/api/record/update`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        alert("บันทึกการแก้ไขไม่สำเร็จ");
+        return;
+      }
+      // Refresh record
+      const data = await res.json();
+      setRecord(data.record || updatedRecord);
+      setIsEditing(false);
+      setEditableRecord(null);
+      alert("บันทึกการแก้ไขสำเร็จ");
+    } catch (err) {
+      alert("เกิดข้อผิดพลาด: " + err.message);
+    }
+  }
+
+  // --- Recalculate total from all item totals and update the record ---
+  function recalculateRecordTotal(items) {
+    const newTotal = items.reduce((sum, item) => {
+      const t = parseFloat(item.total);
+      return sum + (isNaN(t) ? 0 : t);
+    }, 0);
+    setEditableRecord((prev) => ({ ...prev, items, total: newTotal }));
+  }
+
   return (
     <div className="p-6 border rounded-md max-w-4xl mx-auto">
       <button
@@ -312,10 +481,96 @@ export default function Page({ params }) {
         </div>
       </div>
 
+      {/* Edit button */}
+      <div className="mb-4">
+        {!isEditing && (
+          <button
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            onClick={handleEditClick}
+          >
+            แก้ไขเวลา / ประเภท / รายการ
+          </button>
+        )}
+      </div>
+
       <div className="border p-4 mb-6 space-y-1 text-left">
-        <p><strong>เลขที่รายการ:</strong> {record.docNumber}</p>
-        <p><strong>ประเภท:</strong> {record.payType}</p>
-        <p><strong>วันที่:</strong> {formattedDate}</p>
+        <p>
+          <strong>เลขที่รายการ:</strong>{" "}
+          {isEditing ? (
+            <input
+              type="text"
+              value={editableRecord.docNumber}
+              onChange={e =>
+                setEditableRecord({ ...editableRecord, docNumber: e.target.value })
+              }
+              className="border rounded px-2 py-1"
+              style={{ minWidth: 120 }}
+            />
+          ) : (
+            record.docNumber
+          )}
+        </p>
+        <p>
+          <strong>ประเภท:</strong>{" "}
+          {isEditing ? (
+            <select
+              value={editableRecord.payType}
+              onChange={e =>
+                setEditableRecord({ ...editableRecord, payType: e.target.value })
+              }
+              className="border rounded px-2 py-1"
+            >
+              {payTypeOptions.map(opt => (
+                <option value={opt} key={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          ) : (
+            record.payType
+          )}
+        </p>
+        <p>
+          <strong>วันที่:</strong>{" "}
+          {isEditing ? (
+            <>
+              <span>
+                {new Date(editableRecord.createdAt).toLocaleDateString("th-TH", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                })}
+              </span>
+              {" เวลา "}
+              <input
+                type="time"
+                value={editableRecord.timeOnly}
+                onChange={e => {
+                  const [h, m] = e.target.value.split(":");
+                  const oldDate = new Date(editableRecord.createdAt);
+                  const updatedDate = new Date(
+                    oldDate.getFullYear(),
+                    oldDate.getMonth(),
+                    oldDate.getDate(),
+                    Number(h),
+                    Number(m),
+                    0,
+                    0
+                  );
+                  setEditableRecord({
+                    ...editableRecord,
+                    createdAt: updatedDate.toISOString(),
+                    timeOnly: e.target.value,
+                  });
+                }}
+                className="border rounded px-2 py-1"
+                style={{ minWidth: 90 }}
+              />
+            </>
+          ) : (
+            formattedDate
+          )}
+        </p>
         <p><strong>พนักงาน:</strong> {record.employee}</p>
         <p><strong>กะ:</strong> {record.shiftNo}</p>
         <p><strong>ชื่อลูกค้า:</strong> {record.customerName}</p>
@@ -324,7 +579,13 @@ export default function Page({ params }) {
       </div>
 
       <div className="mt-6 bg-yellow-100 text-yellow-900 text-lg font-bold p-4 rounded-md shadow-md max-w-max">
-        <p><strong>จำนวนรวมทั้งหมด:</strong> {record.total.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+        <p>
+          <strong>จำนวนรวมทั้งหมด:</strong>{" "}
+          {(isEditing ? editableRecord.total : record.total).toLocaleString("th-TH", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </p>
       </div>
 
       <h2 className="text-xl font-semibold mb-2">รายการ</h2>
@@ -339,31 +600,191 @@ export default function Page({ params }) {
           </tr>
         </thead>
         <tbody>
-          {record.items && record.items.length > 0 ? (
-            record.items.map((item, index) => (
-              <tr key={index} className="even:bg-gray-50">
-                <td className="border-r border-gray-300 px-3 py-2">{item.currency}</td>
-                <td className="border-r border-gray-300 px-3 py-2">{item.unit}</td>
-                <td className="border-r border-gray-300 px-3 py-2">
-                  {item.rate != null ? item.rate.toLocaleString("th-TH", { minimumFractionDigits: 2 }) : "-"}
-                </td>
-                <td className="border-r border-gray-300 px-3 py-2">
-                  {item.amount != null ? item.amount.toLocaleString("th-TH", { minimumFractionDigits: 2 }) : "-"}
-                </td>
-                <td className="px-3 py-2">
-                  {item.total != null ? item.total.toLocaleString("th-TH", { minimumFractionDigits: 2 }) : "-"}
-                </td>
+          {isEditing
+            ? editableRecord.items && editableRecord.items.length > 0
+              ? (
+                  <>
+                    {editableRecord.items.map((item, index) => (
+                      <tr key={index} className="even:bg-gray-50">
+                        <td className="border-r border-gray-300 px-3 py-2">
+                          <input
+                            type="text"
+                            value={item.currency}
+                            onChange={e => {
+                              const newItems = editableRecord.items.map((it, idx) =>
+                                idx === index ? { ...it, currency: e.target.value } : it
+                              );
+                              setEditableRecord({ ...editableRecord, items: newItems });
+                            }}
+                            className="border rounded px-2 py-1"
+                            style={{ minWidth: 60 }}
+                          />
+                        </td>
+                        {/* <td className="border-r border-gray-300 px-3 py-2">
+                          <input
+                            type="number"
+                            value={item.unit}
+                            onChange={e => {
+                              const newUnit = e.target.value;
+                              const newItems = editableRecord.items.map((it, idx) => {
+                                if (idx === index) {
+                                  const unit = parseFloat(newUnit) || 0;
+                                  const rate = parseFloat(it.rate) || 0;
+                                  const total = unit * rate;
+                                  return { ...it, unit: newUnit, total };
+                                }
+                                return it;
+                              });
+                              setEditableRecord({ ...editableRecord, items: newItems });
+                            }}
+                            className="border rounded px-2 py-1"
+                            style={{ minWidth: 50 }}
+                          />
+                        </td> */}
+                        <td className="border-r border-gray-300 px-3 py-2">
+                          <input
+                            type="text"
+                            value={item.unit ?? ""}
+                            onChange={e => {
+                              const newItems = editableRecord.items.map((it, idx) =>
+                                idx === index ? { ...it, unit: e.target.value } : it
+                              );
+                              setEditableRecord({ ...editableRecord, items: newItems });
+                            }}
+                            className="border rounded px-2 py-1"
+                            style={{ minWidth: 50 }}
+                          />
+                        </td>
+                        <td className="border-r border-gray-300 px-3 py-2">
+                          <input
+                            type="number"
+                            value={item.rate ?? ""}
+                            step="0.01"
+                            onChange={e => {
+                              const newRate = e.target.value;
+                              const newItems = editableRecord.items.map((it, idx) => {
+                                if (idx === index) {
+                                  const amount = parseFloat(it.amount) || 0;
+                                  const rate = parseFloat(newRate) || 0;
+                                  const total = amount * rate;
+                                  return { ...it, rate: newRate, total };
+                                }
+                                return it;
+                              });
+                              recalculateRecordTotal(newItems);
+                            }}
+                            className="border rounded px-2 py-1"
+                            style={{ minWidth: 60 }}
+                          />
+                        </td>
+                        <td className="border-r border-gray-300 px-3 py-2">
+                          <input
+                            type="number"
+                            value={item.amount ?? ""}
+                            step="0.01"
+                            onChange={e => {
+                              const newAmount = e.target.value;
+                              const newItems = editableRecord.items.map((it, idx) => {
+                                if (idx === index) {
+                                  const amount = parseFloat(newAmount) || 0;
+                                  const rate = parseFloat(it.rate) || 0;
+                                  const total = amount * rate;
+                                  return { ...it, amount: newAmount, total };
+                                }
+                                return it;
+                              });
+                              recalculateRecordTotal(newItems);
+                            }}
+                            className="border rounded px-2 py-1"
+                            style={{ minWidth: 60 }}
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          <input
+                            type="number"
+                            value={item.total ?? ""}
+                            step="0.01"
+                            onChange={e => {
+                              const newItems = editableRecord.items.map((it, idx) =>
+                                idx === index ? { ...it, total: e.target.value } : it
+                              );
+                              recalculateRecordTotal(newItems);
+                            }}
+                            className="border rounded px-2 py-1"
+                            style={{ minWidth: 60 }}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                    <tr>
+                      <td colSpan="5" className="p-2 text-center">
+                        <button
+                          className="text-sm bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+                          onClick={() => {
+                            const newItems = [
+                              ...editableRecord.items,
+                              { currency: "", unit: "", rate: "", amount: "", total: "" },
+                            ];
+                            setEditableRecord({ ...editableRecord, items: newItems });
+                          }}
+                        >
+                          + เพิ่มรายการ
+                        </button>
+                      </td>
+                    </tr>
+                  </>
+                )
+              : (
+                <tr>
+                  <td colSpan="5" className="text-center p-4">No items found.</td>
+                </tr>
+              )
+            : record.items && record.items.length > 0 ? (
+              record.items.map((item, index) => (
+                <tr key={index} className="even:bg-gray-50">
+                  <td className="border-r border-gray-300 px-3 py-2">{item.currency}</td>
+                  <td className="border-r border-gray-300 px-3 py-2">
+                    {item.unit ?? "-"}
+                  </td>
+                  <td className="border-r border-gray-300 px-3 py-2">
+                    {item.rate != null ? item.rate.toLocaleString("th-TH", { minimumFractionDigits: 2 }) : "-"}
+                  </td>
+                  <td className="border-r border-gray-300 px-3 py-2">
+                    {item.amount != null ? item.amount.toLocaleString("th-TH", { minimumFractionDigits: 2 }) : "-"}
+                  </td>
+                  <td className="px-3 py-2">
+                    {item.total != null ? item.total.toLocaleString("th-TH", { minimumFractionDigits: 2 }) : "-"}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="5" className="text-center p-4">No items found.</td>
               </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan="5" className="text-center p-4">No items found.</td>
-            </tr>
-          )}
+            )}
         </tbody>
       </table>
 
       <p className="mt-4"><strong>หมายเหตุ:</strong> {record.note}</p>
+
+      {/* Save/Cancel buttons */}
+      {isEditing && (
+        <div className="mt-6 flex gap-2">
+          <button
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            onClick={handleSaveEdit}
+          >
+            บันทึกการแก้ไข
+          </button>
+          <button
+            className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+            onClick={handleCancelEdit}
+            type="button"
+          >
+            ยกเลิก
+          </button>
+        </div>
+      )}
     </div>
   );
 }

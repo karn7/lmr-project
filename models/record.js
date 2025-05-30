@@ -27,8 +27,9 @@ const recordSchema = new Schema({
       amount: Number,
       total: Number
     }
-  ]
-}, { timestamps: true });
+  ],
+  createdAt: Date
+}, { timestamps: false });
 
 const Record = mongoose.models.Record || mongoose.model("Record", recordSchema);
 export default Record;
