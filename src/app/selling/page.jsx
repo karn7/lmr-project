@@ -60,17 +60,8 @@ function ExchangePage() {
 
   const handleSelectCurrency = (currency) => {
     setSelectedCurrency(currency);
-    const autoUnit = currencies.find(c => c.title === currency.title && c.content === "-");
-    if (autoUnit) {
-      setSelectedUnit("");
-      setRate(autoUnit.sell);
-      setTimeout(() => {
-        amountRef.current?.focus();
-      }, 0);
-    } else {
-      setSelectedUnit("");
-      setRate("");
-    }
+    setSelectedUnit("");
+    setRate("");
   };
 
   const handleAddRecord = () => {
@@ -105,6 +96,23 @@ function ExchangePage() {
     (c) => c.title === selectedCurrency?.title
   );
   const amountRef = useRef(null);
+
+  // Auto set rate for currency with single unit (content == "-") on select
+  useEffect(() => {
+    if (
+      selectedCurrency &&
+      filteredUnits.length === 1 &&
+      filteredUnits[0].content.trim() === "-"
+    ) {
+      setSelectedUnit("");
+      setRate(filteredUnits[0].sell);
+      setTimeout(() => {
+        amountRef.current?.focus();
+      }, 0);
+    }
+    // do not clear rate if user edits it
+    // eslint-disable-next-line
+  }, [selectedCurrency]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {

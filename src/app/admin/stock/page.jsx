@@ -27,13 +27,15 @@ function AdminPage() {
       end: "",
     });
 
+
     useEffect(() => {
       if (!selectedBranch) return;
 
       fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/dailystocks/check?branch=${selectedBranch}&date=${today}`)
         .then((res) => res.json())
         .then((data) => {
-          setAlreadyCalculated(data.exists); // สมมุติว่า API ส่งกลับ { exists: true/false }
+          setAlreadyCalculated(data.exists);
+          // ลบการคำนวณอัตโนมัติ
         });
     }, [selectedBranch]);
 
@@ -42,6 +44,15 @@ function AdminPage() {
         alert("ข้อมูลถูกบันทึกลงสต๊อกแล้ว");
         return;
       }
+      // ดึงข้อมูลยอดปิดร้านของเมื่อวาน
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+      const carryRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/dailystocks/last-close?branch=${selectedBranch}&date=${yesterdayStr}`);
+      const carryJson = await carryRes.json();
+      const carryMap = new Map((carryJson.items || []).map(item => [item.currency, item.actual]));
+
       // ดึงเฉพาะข้อมูลจาก /api/stock-diff-today
       const inOutRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/stock-diff-today`, {
         method: "POST",
@@ -59,12 +70,12 @@ function AdminPage() {
       const rateJson = await rateRes.json();
       const rateMap = new Map((rateJson.data || []).map(item => [item.currency, item.averageRate]));
 
-      // map currencyTitles ทั้งหมด และรวมข้อมูล inOutJson.data + averageRate
+      // map currencyTitles ทั้งหมด และรวมข้อมูล inOutJson.data + averageRate และยอดยกมาจาก carryMap
       const mergedStock = currencyTitles.map(({ title }) => {
         const inOutItem = (inOutJson.data || []).find((i) => i.currency === title) || {};
         return {
           currency: title,
-          carryOver: 0,
+          carryOver: carryMap.get(title) ?? 0,
           inOutTotal: inOutItem.inOutTotal ?? 0,
           averageRate: rateMap.get(title) ?? 0
         };
@@ -218,21 +229,24 @@ function AdminPage() {
                     <option key={b} value={b}>{b}</option>
                   ))}
                 </select>
+                {!alreadyCalculated && (
+                  <button
+                    onClick={handleCalculateStock}
+                    disabled={!selectedBranch}
+                    className={`${
+                      selectedBranch ? "bg-blue-500 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"
+                    } text-white font-bold py-2 px-4 rounded`}
+                  >
+                    คำนวณสต๊อก
+                  </button>
+                )}
                 <button
-                  onClick={handleCalculateStock}
-                  disabled={!selectedBranch}
-                  className={`${
-                    selectedBranch ? "bg-blue-500 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"
-                  } text-white font-bold py-2 px-4 rounded`}
-                >
-                  คำนวณสต๊อก
-                </button>
-                <button
-                  disabled={!selectedBranch}
-                  className={`${
-                    selectedBranch ? "bg-green-500 hover:bg-green-700" : "bg-gray-400 cursor-not-allowed"
-                  } text-white font-bold py-2 px-4 rounded`}
-                  onClick={generatePDF}
+                  className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                  onClick={() => {
+                    if (!selectedBranch) return;
+                    const url = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/userstock?branch=${selectedBranch}`;
+                    window.open(url, "_blank");
+                  }}
                 >
                   ดูสต๊อกปัจจุบัน
                 </button>
@@ -280,8 +294,8 @@ function AdminPage() {
                 </div>
               </div>
               {showStockTable && (
-                <div className="mt-6">
-                  <div className="mb-4">
+                <>
+                  <div className="mt-6 mb-4">
                     <button
                       onClick={handleSaveStock}
                       className="bg-purple-600 hover:bg-purple-800 text-white font-bold py-2 px-4 rounded"
@@ -289,43 +303,46 @@ function AdminPage() {
                       บันทึกข้อมูล
                     </button>
                   </div>
-                  <table className="min-w-full border border-gray-300 text-sm">
-                    <thead className="bg-gray-100">
-                      <tr>
-                        <th className="border px-4 py-2">สกุลเงิน</th>
-                        <th className="border px-4 py-2">ยอดยกมา</th>
-                        <th className="border px-4 py-2">เข้า/ออกวันนี้</th>
-                        <th className="border px-4 py-2">รวมทั้งหมด</th>
-                        <th className="border px-4 py-2">เรทเฉลี่ย</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {currencyTitles.map((post, index) => (
-                        <tr key={index}>
-                          <td className="border px-4 py-2">{post.title}</td>
-                          <td className="border px-4 py-2">
-                            {stockMap.get(post.title)?.carryOver ?? 0}
-                          </td>
-                          <td className="border px-4 py-2">
-                            {stockMap.get(post.title)?.inOutTotal ?? 0}
-                          </td>
-                          <td className="border px-4 py-2">
-                            {(stockMap.get(post.title)?.carryOver ?? 0) + (stockMap.get(post.title)?.inOutTotal ?? 0)}
-                          </td>
-                          <td className="border px-4 py-2">
-                            {stockMap.get(post.title)?.averageRate ?? 0}
-                          </td>
+                  <div className="mt-4">
+                    <table className="min-w-full border border-gray-300 text-sm">
+                      <thead className="bg-gray-100">
+                        <tr>
+                          <th className="border px-4 py-2">สกุลเงิน</th>
+                          <th className="border px-4 py-2">ยอดยกมา</th>
+                          <th className="border px-4 py-2">เข้า/ออกวันนี้</th>
+                          <th className="border px-4 py-2">รวมทั้งหมด</th>
+                          <th className="border px-4 py-2">เรทเฉลี่ย</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {currencyTitles.map((post, index) => (
+                          <tr key={index}>
+                            <td className="border px-4 py-2">{post.title}</td>
+                            <td className="border px-4 py-2">
+                              {stockMap.get(post.title)?.carryOver ?? 0}
+                            </td>
+                            <td className="border px-4 py-2">
+                              {stockMap.get(post.title)?.inOutTotal ?? 0}
+                            </td>
+                            <td className="border px-4 py-2">
+                              {(stockMap.get(post.title)?.carryOver ?? 0) + (stockMap.get(post.title)?.inOutTotal ?? 0)}
+                            </td>
+                            <td className="border px-4 py-2">
+                              {stockMap.get(post.title)?.averageRate ?? 0}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
           </div>
         </div>
       </div>
       <Footer />
+
     </div>
   )
 }

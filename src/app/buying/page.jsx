@@ -107,6 +107,7 @@ function ExchangePage() {
     };
   }, [selectedCurrency, selectedUnit, rate, amount]);
 
+  // ดึงเรทอัตโนมัติเมื่อเลือกสกุลที่มีหน่วยเดียวและ content เป็น "-"
   useEffect(() => {
     if (
       selectedCurrency &&
@@ -119,7 +120,7 @@ function ExchangePage() {
         amountRef.current?.focus();
       }, 0);
     }
-  }, [selectedCurrency, filteredUnits]);
+  }, [selectedCurrency]);
 
   const handleSave = async () => {
     const confirmSave = confirm("คุณต้องการบันทึกรายการหรือไม่?");
