@@ -1,15 +1,17 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 
 function StockSummaryPage() {
   const [currencyTitles, setCurrencyTitles] = useState([]);
   const [calculatedStock, setCalculatedStock] = useState([]);
   const [showStockTable, setShowStockTable] = useState(false);
+  const [selectedBranch, setSelectedBranch] = useState("");
 
-  const searchParams = useSearchParams();
-  const selectedBranch = searchParams.get("branch") || "";
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setSelectedBranch(params.get("branch") || "");
+  }, []);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -98,3 +100,5 @@ function StockSummaryPage() {
 }
 
 export default StockSummaryPage;
+
+export const dynamic = "force-dynamic";
