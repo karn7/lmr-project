@@ -46,8 +46,7 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
       <style jsx global>{`
         @media print {
           @page {
-            size: A5 portrait;
-            margin: 10mm;
+            margin: 0mm;
           }
           body {
             margin: 0;
@@ -56,7 +55,7 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
       `}</style>
 
       <div className="w-full flex justify-center">
-      <div className="w-[148mm] max-w-[100%]">
+      <div className="w-[95mm]">
         <div className="p-6 text-sm font-mono">
           <h1 className="text-center text-lg font-bold">EXCHANGE RECEIPT</h1>
           <p className="text-center font-bold text-base">มันนี่เมท เคอเรนซี่ เอ็กซ์เชนจ์</p>
@@ -112,24 +111,20 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
               TOTAL THB: {Number(record.total).toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </div>
           )}
-          <div className="flex flex-col justify-end h-[350px]">
-            <div className="mt-10 flex flex-row justify-between px-8">
-              <div className="flex flex-col items-center w-1/2">
-                <div className="border-t border-black w-4/5" />
-                <div className="mt-1 text-sm text-center">
-                  <div>Issued by:</div>
-                  <div>{record.employee}</div>
-                </div>
-              </div>
-              <div className="flex flex-col items-center w-1/2">
-                <div className="border-t border-black w-4/5" />
-                <div className="mt-1 text-sm text-center">Customer {record.customerName}</div>
-              </div>
+          <div className="mt-10 flex flex-col items-center">
+            <div className="border-t border-black w-1/2" />
+            <div className="mt-2 text-sm text-center">
+              Issued by: {record.employee}
             </div>
-            <div className="mt-6 text-center text-xs italic">
-              <p>กรุณาตรวจสอบจำนวนเงินให้ถูกต้อง ถือว่าลูกค้าได้ตรวจสอบและรับเงินครบถ้วนแล้ว</p>
-              <p>Please verify the amount. It is deemed that the customer has checked and received the full amount.</p>
+            <div className="mt-10 border-t border-black w-1/2" />
+            <div className="mt-2 text-sm text-center">
+              Customer {record.customerName}
             </div>
+          </div>
+          
+          <div className="mt-6 text-center text-xs italic">
+            <p>กรุณาตรวจสอบจำนวนเงินให้ถูกต้อง ถือว่าลูกค้าได้ตรวจสอบและรับเงินครบถ้วนแล้ว</p>
+            <p>Please verify the amount. It is deemed that the customer has checked and received the full amount.</p>
           </div>
         </div>
       </div>
