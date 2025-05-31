@@ -68,6 +68,7 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
           <div className="mb-1 text-xs">Trans No: {record.docNumber}</div>
           <div className="text-xs">Date: {new Date(record.createdAt).toLocaleString("en-US")}</div>
           <div className="text-xs">Customer Name: {record.customerName}</div>
+          
           <hr className="my-2" />
 
           <table className="w-full text-left mb-1">
@@ -130,6 +131,11 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
               <p>กรุณาตรวจสอบจำนวนเงินให้ถูกต้อง ถือว่าลูกค้าได้ตรวจสอบและรับเงินครบถ้วนแล้ว</p>
               <p>Please verify the amount. It is deemed that the customer has checked and received the full amount.</p>
             </div>
+            {record.payMethod && record.receiveMethod && (
+              <div className="text-[10px] text-right mt-2">
+                {(record.payMethod === "cash" ? "C" : "T") + "/" + (record.receiveMethod === "cash" ? "C" : "T")}
+              </div>
+            )}
           </div>
         </div>
       </div>
