@@ -25,9 +25,27 @@ export async function POST(req) {
 
     console.log("📄 จำนวน record ที่เจอ:", records.length);
 
+    let targetRecords = records;
+
+    // ถ้าไม่มี record วันนี้ ให้ไปดูของเมื่อวาน
+    if (records.length === 0) {
+      const yesterdayStart = new Date(start);
+      yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+      const yesterdayEnd = new Date(end);
+      yesterdayEnd.setDate(yesterdayEnd.getDate() - 1);
+
+      targetRecords = await Record.find({
+        branch,
+        payType: "Buying",
+        createdAt: { $gte: yesterdayStart, $lte: yesterdayEnd },
+      });
+
+      console.log("📄 ดึงข้อมูลจากเมื่อวานแทน จำนวน:", targetRecords.length);
+    }
+
     const rateMap = {};
 
-    for (const record of records) {
+    for (const record of targetRecords) {
       for (const item of record.items) {
         if (!rateMap[item.currency]) {
           rateMap[item.currency] = { total: 0, count: 0 };

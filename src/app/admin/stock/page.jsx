@@ -53,31 +53,50 @@ function AdminPage() {
       const carryJson = await carryRes.json();
       const carryMap = new Map((carryJson.items || []).map(item => [item.currency, item.actual]));
 
-      // ดึงเฉพาะข้อมูลจาก /api/stock-diff-today
+      // ดึงเฉพาะข้อมูลจาก /api/stock-diff-today พร้อมเพิ่ม payType = "Buying"
       const inOutRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/stock-diff-today`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ branch: selectedBranch, date: today }),
+        body: JSON.stringify({ branch: selectedBranch, date: today, payType: "Buying" }),
       });
       const inOutJson = await inOutRes.json();
 
-      // ดึง averageRate จาก /api/average-rate-today
-      const rateRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/average-rate-today`, {
+      // เพิ่มการดึงค่า rate ของเมื่อวาน
+      const rateYesterdayRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/average-rate-today`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ branch: selectedBranch, date: yesterdayStr }),
+      });
+      const rateYesterdayJson = await rateYesterdayRes.json();
+      const rateYesterdayMap = new Map((rateYesterdayJson.data || []).map(item => [item.currency, item.averageRate]));
+
+      // ดึงค่า rate ของวันนี้
+      const rateTodayRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/average-rate-today`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ branch: selectedBranch, date: today }),
       });
-      const rateJson = await rateRes.json();
-      const rateMap = new Map((rateJson.data || []).map(item => [item.currency, item.averageRate]));
+      const rateTodayJson = await rateTodayRes.json();
+      const rateTodayMap = new Map((rateTodayJson.data || []).map(item => [item.currency, item.averageRate]));
 
       // map currencyTitles ทั้งหมด และรวมข้อมูล inOutJson.data + averageRate และยอดยกมาจาก carryMap
       const mergedStock = currencyTitles.map(({ title }) => {
-        const inOutItem = (inOutJson.data || []).find((i) => i.currency === title) || {};
+        const inOutItem = (inOutJson.data || []).find((i) => i.currency === title);
+        const inOutTotal = inOutItem?.inOutTotal ?? 0;
+
+        // ถ้า inOut วันนี้ไม่มี และยอดยกมาก็ไม่มี ให้ดึงยอดของเมื่อวานจาก carryMap
+        const fallbackInOut = carryMap.get(title) ?? 0;
+        const finalInOutTotal = inOutTotal === 0 ? fallbackInOut : inOutTotal;
+
+        const rateY = rateYesterdayMap.get(title) ?? 0;
+        const rateT = rateTodayMap.get(title) ?? 0;
         return {
           currency: title,
           carryOver: carryMap.get(title) ?? 0,
-          inOutTotal: inOutItem.inOutTotal ?? 0,
-          averageRate: rateMap.get(title) ?? 0
+          inOutTotal: finalInOutTotal,
+          averageRate: inOutItem
+            ? (rateY && rateT ? (rateY + rateT) / 2 : rateY || rateT)
+            : rateY || 0
         };
       });
       setCalculatedStock(mergedStock);
@@ -249,6 +268,16 @@ function AdminPage() {
                   }}
                 >
                   ดูสต๊อกปัจจุบัน
+                </button>
+                <button
+                  className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
+                  onClick={() => {
+                    if (!selectedBranch) return;
+                    const url = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/editstock?branch=${selectedBranch}`;
+                    window.open(url, "_blank");
+                  }}
+                >
+                  แก้ไขสต๊อก
                 </button>
                 <div className="flex items-center space-x-2">
                   <input
