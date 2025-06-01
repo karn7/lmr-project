@@ -113,7 +113,7 @@ export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
               TOTAL THB: {Number(record.total).toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </div>
           )}
-          <div className="flex flex-col justify-end h-[350px]">
+          <div className="flex flex-col justify-end h-[200px]">
             <div className="mt-10 flex flex-row justify-between px-8">
               <div className="flex flex-col items-center w-1/2">
                 <div className="border-t border-black w-4/5" />
