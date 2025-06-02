@@ -1,9 +1,9 @@
 "export const dynamic = \"force-dynamic\";"
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function EditStockPage() {
+function EditStockPage() {
   const searchParams = useSearchParams();
   const branch = searchParams.get("branch") || "ALL";
 
@@ -134,5 +134,13 @@ export default function EditStockPage() {
         บันทึกการแก้ไข
       </button>
     </div>
+  );
+}
+
+export default function Wrapper() {
+  return (
+    <Suspense>
+      <EditStockPage />
+    </Suspense>
   );
 }
