@@ -53,7 +53,7 @@ function ReportPage() {
           const allBranches = Array.from(new Set(data.shifts.map(s => s.branch)));
           setBranches(allBranches);
         });
-    }, []);
+    }, [selectedDate]);
     
     const uniqueEmployees = Array.isArray(records)
       ? Array.from(

@@ -82,18 +82,16 @@ function AdminPage() {
       // map currencyTitles ทั้งหมด และรวมข้อมูล inOutJson.data + averageRate และยอดยกมาจาก carryMap
       const mergedStock = currencyTitles.map(({ title }) => {
         const inOutItem = (inOutJson.data || []).find((i) => i.currency === title);
-        const inOutTotal = inOutItem?.inOutTotal ?? 0;
-
-        // ถ้า inOut วันนี้ไม่มี และยอดยกมาก็ไม่มี ให้ดึงยอดของเมื่อวานจาก carryMap
-        const fallbackInOut = carryMap.get(title) ?? 0;
-        const finalInOutTotal = inOutTotal === 0 ? fallbackInOut : inOutTotal;
+        const carry = carryMap.get(title) ?? 0;
+        const inout = inOutItem?.inOutTotal ?? 0;
 
         const rateY = rateYesterdayMap.get(title) ?? 0;
         const rateT = rateTodayMap.get(title) ?? 0;
+
         return {
           currency: title,
-          carryOver: carryMap.get(title) ?? 0,
-          inOutTotal: finalInOutTotal,
+          carryOver: carry,
+          inOutTotal: inout,
           averageRate: inOutItem
             ? (rateY && rateT ? (rateY + rateT) / 2 : rateY || rateT)
             : rateY || 0
