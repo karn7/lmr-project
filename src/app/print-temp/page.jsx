@@ -8,9 +8,9 @@ export default function TempPrintPage() {
     if (!docNumber) return alert("กรุณาใส่เลขที่รายการ");
     const base = window.location.origin;
     window.open(
-      `${base}/printreceipt?docNumber=${docNumber}&total=0`,
+      `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/receipt-copy/${docNumber}`,
       "_blank",
-      "width=500,height=400"
+      "width=500,height=600"
     );
   };
 
