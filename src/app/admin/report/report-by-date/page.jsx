@@ -12,6 +12,7 @@ export default function ReportByDate() {
   const [loading, setLoading] = useState(false);
   const [records, setRecords] = useState([]);
   const [selectedPayType, setSelectedPayType] = useState("Buying");
+  const [selectedBranch, setSelectedBranch] = useState("Asawann");
 
   const fetchData = async () => {
     setLoading(true);
@@ -37,7 +38,7 @@ export default function ReportByDate() {
     setLoading(false);
   };
 
-  const generatePDF = () => {
+  const generatePDF = async () => {
     const formatNumber = (num) => {
       if (typeof num === "number") {
         return num.toLocaleString("en-US", { maximumFractionDigits: 6 });
@@ -49,24 +50,58 @@ export default function ReportByDate() {
     doc.setFontSize(16);
     doc.text("Currency Exchange Report", 105, 15, { align: "center" });
 
+    const rateCache = {};
+
+    // Pre-fetch average rates for each day
+    if (selectedPayType === "Selling") {
+      await Promise.all(
+        records.map(async (day) => {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/dailystocks?branch=${selectedBranch}&date=${day.date}`);
+          const json = await res.json();
+          const stockItems = json.stocks?.[0]?.items || [];
+          rateCache[day.date] = Object.fromEntries(
+            stockItems.map((item) => [item.currency, item.averageRate ?? 0])
+          );
+        })
+      );
+    }
+
     let y = 30;
     records.forEach((day) => {
       doc.text(`Date: ${day.date}`, 14, y);
-      autoTable(doc, {
-        startY: y + 5,
-        head: [["Document", "Currency", "Amount", "Rate", "Total"]],
-        body: day.items.map((item) => [
+      const headers = selectedPayType === "Selling"
+        ? ["Document", "Currency", "Amount", "Rate", "Total", "Cost Rate", "Cost Total", "Profit/Loss"]
+        : ["Document", "Currency", "Amount", "Rate", "Total"];
+
+      const body = day.items.map((item) => {
+        const base = [
           item.docNumber,
           item.currency,
           formatNumber(item.amount),
           formatNumber(item.rate),
           formatNumber(item.total),
-        ]),
+        ];
+        if (selectedPayType === "Selling") {
+          const costRate = rateCache[day.date]?.[item.currency] ?? 0;
+          const costTotal = item.amount * costRate;
+          const profit = item.total - costTotal;
+          base.push(
+            formatNumber(costRate),
+            formatNumber(costTotal),
+            formatNumber(profit)
+          );
+        }
+        return base;
+      });
+
+      autoTable(doc, {
+        startY: y + 5,
+        head: [headers],
+        body,
       });
       y = doc.lastAutoTable.finalY + 10;
     });
-
-    // Set PDF filename as [selectedPayType]-[startDate]_to_[endDate].pdf
+    
     const filename = `${selectedPayType}-${startDate}_to_${endDate}.pdf`;
     doc.save(filename);
   };
@@ -98,6 +133,10 @@ export default function ReportByDate() {
     <div className="p-6 max-w-3xl mx-auto space-y-4">
       <button onClick={() => window.history.back()} className="mb-4 bg-gray-300 px-4 py-2 rounded">ย้อนกลับ</button>
       <h1 className="text-2xl font-bold">รายงานตามช่วงเวลา</h1>
+      <select value={selectedBranch} onChange={(e) => setSelectedBranch(e.target.value)} className="border px-2 py-1 rounded mr-2">
+        <option value="Asawann">Asawann</option>
+        <option value="OtherBranch">OtherBranch</option>
+      </select>
       <div className="space-x-2">
         <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />

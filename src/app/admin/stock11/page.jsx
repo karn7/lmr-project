@@ -6,14 +6,13 @@ import Footer from '../components/Footer'
 import SideNav from '../components/SideNav'
 
 import { useSession, signOut } from 'next-auth/react'
-import { redirect, useRouter } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 function AdminPage() {
 
     const { data: session } = useSession();
-    const router = useRouter();
     
     const [branches, setBranches] = useState([]);
     const [selectedBranch, setSelectedBranch] = useState("");
@@ -32,21 +31,22 @@ function AdminPage() {
     useEffect(() => {
       if (!selectedBranch) return;
 
-      fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/dailystocks/check?branch=${selectedBranch}&date=${today}`)
+      fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/dailystocks/check?branch=${selectedBranch}&date=${selectedDateForDailyStock.start || today}`)
         .then((res) => res.json())
         .then((data) => {
           setAlreadyCalculated(data.exists);
           // ลบการคำนวณอัตโนมัติ
         });
-    }, [selectedBranch]);
+    }, [selectedBranch, selectedDateForDailyStock.start]);
 
     const handleCalculateStock = async () => {
+      const calculationDate = selectedDateForDailyStock.start || today;
       if (alreadyCalculated) {
         alert("ข้อมูลถูกบันทึกลงสต๊อกแล้ว");
         return;
       }
       // ดึงข้อมูลยอดปิดร้านของเมื่อวาน
-      const yesterday = new Date();
+      const yesterday = new Date(calculationDate);
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayStr = yesterday.toISOString().split("T")[0];
 
@@ -58,50 +58,27 @@ function AdminPage() {
       const inOutRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/stock-diff-today`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ branch: selectedBranch, date: today, payType: "Buying" }),
+        body: JSON.stringify({ branch: selectedBranch, date: calculationDate, payType: "Buying" }),
       });
       const inOutJson = await inOutRes.json();
 
-      // เพิ่มการดึงค่า rate ของเมื่อวาน (ใช้ /api/dailystocks)
-      const dailyStockYRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/dailystocks?branch=${selectedBranch}&date=${yesterdayStr}`);
-      const dailyStockYJson = await dailyStockYRes.json();
-      const yesterdayStockItems = dailyStockYJson.stocks?.[0]?.items || [];
-      const rateYesterdayMap = new Map(yesterdayStockItems.map(item => [item.currency, item.averageRate]));
-
-      // ดึง record ทั้งหมด แล้ว filter หาวันนี้และ payType = "Buying" เพื่อคำนวณ average rate (จาก items)
-      const recordRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/record`);
-      const recordJson = await recordRes.json();
-      const todayItems = (recordJson.records || [])
-        .filter((r) => {
-          const recordDate = r.date
-            ? r.date.split("T")[0]
-            : r.createdAt
-            ? new Date(r.createdAt).toISOString().split("T")[0]
-            : "";
-          return r.branch === selectedBranch && r.payType === "Buying" && recordDate === today;
-        })
-        .flatMap((r) => r.items || []);
-
-      const rateSum = {};
-      const rateCount = {};
-
-      todayItems.forEach((item) => {
-        if (!rateSum[item.currency]) {
-          rateSum[item.currency] = 0;
-          rateCount[item.currency] = 0;
-        }
-        if (item.rate && item.rate > 0) {
-          rateSum[item.currency] += item.rate;
-          rateCount[item.currency] += 1;
-        }
+      // เพิ่มการดึงค่า rate ของเมื่อวาน
+      const rateYesterdayRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/average-rate-today`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ branch: selectedBranch, date: yesterdayStr }),
       });
+      const rateYesterdayJson = await rateYesterdayRes.json();
+      const rateYesterdayMap = new Map((rateYesterdayJson.data || []).map(item => [item.currency, item.averageRate]));
 
-      const rateTodayMap = new Map(
-        Object.keys(rateSum).map((currency) => [
-          currency,
-          rateSum[currency] / rateCount[currency],
-        ])
-      );
+      // ดึงค่า rate ของวันนี้
+      const rateTodayRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/average-rate-today`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ branch: selectedBranch, date: calculationDate }),
+      });
+      const rateTodayJson = await rateTodayRes.json();
+      const rateTodayMap = new Map((rateTodayJson.data || []).map(item => [item.currency, item.averageRate]));
 
       // map currencyTitles ทั้งหมด และรวมข้อมูล inOutJson.data + averageRate และยอดยกมาจาก carryMap
       const mergedStock = currencyTitles.map(({ title }) => {
@@ -122,26 +99,13 @@ function AdminPage() {
         };
       });
       setCalculatedStock(mergedStock);
+      console.log("📊 ข้อมูล mergedStock:", mergedStock);
       setShowStockTable(true);
     };
 
     useEffect(() => {
-      if (!session) {
-        redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`);
-      } else if (session?.user?.role !== "admin") {
+      if (session?.user?.role !== "admin") {
         redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/welcome`);
-      } else if (session?.user?.lastLoginDate) {
-        const last = new Date(session.user.lastLoginDate);
-        const now = new Date();
-
-        const isNewDay = last.getFullYear() !== now.getFullYear()
-                      || last.getMonth() !== now.getMonth()
-                      || last.getDate() !== now.getDate();
-
-        if (isNewDay) {
-          alert("เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่");
-          signOut();
-        }
       }
     }, [session]);
 
@@ -179,6 +143,7 @@ function AdminPage() {
 
   // ฟังก์ชันสำหรับสร้าง PDF รายงานสต๊อก
   const generatePDF = () => {
+    const calculationDate = selectedDateForDailyStock.start || today;
     const doc = new jsPDF();
     doc.setFontSize(16);
     doc.text(`รายงานสต๊อกรายวัน (${selectedBranch})`, 105, 15, { align: "center" });
@@ -195,59 +160,27 @@ function AdminPage() {
       }),
     });
 
-    doc.save(`DailyStock-${selectedBranch}-${today}.pdf`);
+    doc.save(`DailyStock-${selectedBranch}-${calculationDate}.pdf`);
   };
 
-  // ฟังก์ชันสำหรับสร้าง PDF รายงานสต๊อกรายวันช่วงวันที่เลือก โดยดึงข้อมูลแต่ละวันจริง
-  const generateDailyStockPDF = async () => {
+  // ฟังก์ชันสำหรับสร้าง PDF รายงานสต๊อกรายวันช่วงวันที่เลือก โดยไม่ใช้ API
+  const generateDailyStockPDF = () => {
     const doc = new jsPDF();
     doc.setFontSize(16);
     doc.text(`Daily Stock Report: ${selectedBranch}`, 105, 15, { align: "center" });
     doc.text(`From: ${selectedDateForDailyStock.start} To: ${selectedDateForDailyStock.end}`, 105, 25, { align: "center" });
 
-    const startDate = new Date(selectedDateForDailyStock.start);
-    const endDate = new Date(selectedDateForDailyStock.end);
-    const dateList = [];
-    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-      dateList.push(new Date(d));
-    }
-
-    // Reduce font size to fit one full day per page and force each day to start on a new page
-    let isFirstPage = true;
-
-    for (const dateObj of dateList) {
-      const dateStr = dateObj.toISOString().split("T")[0];
-
-      // Updated API call to use /api/dailystocks and get items from stocks[0]?.items
-      const stockRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/dailystocks?branch=${selectedBranch}&date=${dateStr}`);
-      const stockJson = await stockRes.json();
-      const stockItems = stockJson.stocks[0]?.items || [];
-      const stockData = new Map(stockItems.map(item => [item.currency, item]));
-
-      if (!isFirstPage) {
-        doc.addPage();
-      } else {
-        isFirstPage = false;
-      }
-
-      let y = 15;
-      doc.setFontSize(12);
-      doc.text(`Date: ${dateStr}`, 14, y);
-
-      autoTable(doc, {
-        startY: y + 5,
-        head: [["Currency", "Carry Over", "In/Out", "Total", "Average Rate"]],
-        body: currencyTitles.map((post) => {
-          const stock = stockData.get(post.title) || {};
-          const carry = stock.carryOver ?? 0;
-          const inout = stock.inOutTotal ?? 0;
-          const rate = stock.averageRate ?? 0;
-          return [post.title, carry, inout, carry + inout, rate];
-        }),
-        styles: { fontSize: 6 },
-        margin: { top: y + 5 }
-      });
-    }
+    autoTable(doc, {
+      startY: 35,
+      head: [["Currency", "Carry Over", "In/Out", "Total", "Average Rate"]],
+      body: currencyTitles.map((post) => {
+        const stock = stockMap.get(post.title) || {};
+        const carry = stock.carryOver ?? 0;
+        const inout = stock.inOutTotal ?? 0;
+        const rate = stock.averageRate ?? 0;
+        return [post.title, carry, inout, carry + inout, rate];
+      }),
+    });
 
     const filename = `DailyStock-${selectedBranch}-${selectedDateForDailyStock.start}_to_${selectedDateForDailyStock.end}.pdf`;
     doc.save(filename);
@@ -255,8 +188,9 @@ function AdminPage() {
 
   // ฟังก์ชันบันทึกข้อมูลสต๊อกทีละรายการ
   const handleSaveStock = async () => {
+    const calculationDate = selectedDateForDailyStock.start || today;
     const payload = {
-      date: today,
+      date: calculationDate,
       branch: selectedBranch,
       items: calculatedStock.map((stock) => ({
         currency: stock.currency,
@@ -301,6 +235,17 @@ function AdminPage() {
                     <option key={b} value={b}>{b}</option>
                   ))}
                 </select>
+                <input
+                  type="date"
+                  value={selectedDateForDailyStock.start || today}
+                  onChange={(e) => {
+                    const date = new Date(e.target.value);
+                    const formatted = date.toISOString().split("T")[0];
+                    setSelectedDateForDailyStock((prev) => ({ ...prev, start: formatted }));
+                  }}
+                  className="border rounded px-2 py-2"
+                  disabled={!selectedBranch}
+                />
                 {!alreadyCalculated && (
                   <button
                     onClick={handleCalculateStock}
@@ -312,76 +257,6 @@ function AdminPage() {
                     คำนวณสต๊อก
                   </button>
                 )}
-                <button
-                  className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-                  onClick={() => {
-                    if (!selectedBranch) return;
-                    const url = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/userstock?branch=${selectedBranch}`;
-                    window.open(url, "_blank");
-                  }}
-                >
-                  ดูสต๊อกปัจจุบัน
-                </button>
-                <button
-                  className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
-                  onClick={() => {
-                    if (!selectedBranch) return;
-                    const url = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/editstock?branch=${selectedBranch}`;
-                    window.open(url, "_blank");
-                  }}
-                >
-                  แก้ไขสต๊อก
-                </button>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="date"
-                    value={selectedDateForDailyStock.start || ""}
-                    onChange={(e) =>
-                      setSelectedDateForDailyStock((prev) => ({
-                        ...prev,
-                        start: e.target.value,
-                      }))
-                    }
-                    className="border rounded px-2 py-1"
-                    disabled={!selectedBranch}
-                  />
-                  <span>ถึง</span>
-                  <input
-                    type="date"
-                    value={selectedDateForDailyStock.end || ""}
-                    onChange={(e) =>
-                      setSelectedDateForDailyStock((prev) => ({
-                        ...prev,
-                        end: e.target.value,
-                      }))
-                    }
-                    className="border rounded px-2 py-1"
-                    disabled={!selectedBranch}
-                  />
-                  <button
-                    disabled={
-                      !selectedBranch ||
-                      !selectedDateForDailyStock.start ||
-                      !selectedDateForDailyStock.end
-                    }
-                    className={`${
-                      selectedBranch && selectedDateForDailyStock.start && selectedDateForDailyStock.end
-                        ? "bg-green-500 hover:bg-green-700"
-                        : "bg-gray-400 cursor-not-allowed"
-                    } text-white font-bold py-2 px-4 rounded`}
-                    onClick={generateDailyStockPDF}
-                  >
-                    ดูสต๊อกรายวัน
-                  </button>
-                </div>
-                <button
-                  className="bg-gray-600 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded"
-                  onClick={() => {
-                    router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/stock11`);
-                  }}
-                >
-                  บันทึกสต๊อกย้อนหลัง
-                </button>
               </div>
               {showStockTable && (
                 <>

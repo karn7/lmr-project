@@ -30,10 +30,10 @@ export async function GET(req) {
 
   try {
     await connectMongoDB();
-    console.log("✅ Connected to MongoDB");
+  //  console.log("✅ Connected to MongoDB");
 
     const dailyStocks = await DailyStock.find().sort({ date: -1 });
-    console.log("✅ DailyStocks fetched:", dailyStocks.length);
+   // console.log("✅ DailyStocks fetched:", dailyStocks.length);
 
     return new NextResponse(JSON.stringify({ dailyStocks }), {
       status: 200,
@@ -58,7 +58,7 @@ export async function POST(req) {
       createdBy
     } = await req.json();
 
-    console.log("📥 รับข้อมูลจาก client:", { date, branch, items, createdBy });
+   // console.log("📥 รับข้อมูลจาก client:", { date, branch, items, createdBy });
 
     if (!items || !Array.isArray(items)) {
       return NextResponse.json({ message: "Invalid items format" }, { status: 400 });
