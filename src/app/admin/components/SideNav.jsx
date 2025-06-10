@@ -11,6 +11,7 @@ function SideNav() {
             <li><Link className='block my-3 p-3 rounded-lg' href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/report`}>Report</Link></li>
             <li><Link className='block my-3 p-3 rounded-lg' href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/cash`}>Cash</Link></li>
             <li><Link className='block my-3 p-3 rounded-lg' href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/stock`}>Stocks</Link></li>
+            <li><Link className='block my-3 p-3 rounded-lg' href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/wholesale`}>Wholesale</Link></li>
         </ul>
     </nav>
   )
