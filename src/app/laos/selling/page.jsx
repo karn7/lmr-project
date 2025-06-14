@@ -35,7 +35,7 @@ function ExchangePage() {
       const fetchCurrencies = async () => {
         const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/posts`);
         const data = await res.json();
-        const filtered = data.posts.filter((c) => c.title !== "THB");
+        const filtered = data.posts.filter((c) => c.title !== "LAK");
         setCurrencies(filtered);
       };
     
@@ -105,7 +105,7 @@ function ExchangePage() {
       filteredUnits[0].content.trim() === "-"
     ) {
       setSelectedUnit("");
-      setRate(filteredUnits[0].sell);
+      setRate(filteredUnits[0].selllaos);
       setTimeout(() => {
         amountRef.current?.focus();
       }, 0);
@@ -211,7 +211,7 @@ function ExchangePage() {
     <div className="bg-orange-500 min-h-screen p-4 text-black">
       <div className="flex justify-between items-start">
         <Link
-          href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/welcome`}
+          href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/laos/exchange`}
           className="bg-gray-500 inline-block text-white border py-2 px-3 rounded my-2"
         >
           กลับ
@@ -265,96 +265,8 @@ function ExchangePage() {
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2 bg-white p-4 rounded shadow mt-2 text-sm">
-          <div>
-            <div>ประเภทลูกค้า</div>
-            <label>
-              <input
-                type="radio"
-                name="ptype"
-                value="Selling"
-                checked={payType === "Selling"}
-                onChange={() => setPayType("Selling")}
-              />{" "}
-              Selling
-            </label>
-            <label className="ml-4">
-              <input
-                type="radio"
-                name="ptype"
-                value="NP(S)"
-                checked={payType === "NP(S)"}
-                onChange={() => setPayType("NP(S)")}
-              />{" "}
-              NP
-            </label>
-          </div>
-          <div>
-            <div>ลูกค้าจ่ายเงินเป็น</div>
-            <label>
-              <input
-                type="radio"
-                name="paymethod"
-                value="cash"
-                checked={payMethod === "cash"}
-                onChange={() => setPayMethod("cash")}
-              />{" "}
-              เงินสด
-            </label>
-            <label className="ml-4">
-              <input
-                type="radio"
-                name="paymethod"
-                value="transfer"
-                checked={payMethod === "transfer"}
-                onChange={() => setPayMethod("transfer")}
-              />{" "}
-              โอนเข้าบัญชี
-            </label>
-            {payMethod === "transfer" && (
-              <input
-                type="text"
-                className="w-full mt-1 px-2 py-1 border rounded"
-                placeholder="รายละเอียดบัญชีที่โอนเข้า"
-                value={payMethodNote}
-                onChange={(e) => setPayMethodNote(e.target.value)}
-              />
-            )}
-          </div>
-          <div></div>
-          <div>
-            <div>ลูกค้ารับเงินเป็น</div>
-            <label>
-              <input
-                type="radio"
-                name="receivemethod"
-                value="cash"
-                checked={receiveMethod === "cash"}
-                onChange={() => setReceiveMethod("cash")}
-              />{" "}
-              เงินสด
-            </label>
-            <label className="ml-4">
-              <input
-                type="radio"
-                name="receivemethod"
-                value="transfer"
-                checked={receiveMethod === "transfer"}
-                onChange={() => setReceiveMethod("transfer")}
-              />{" "}
-              โอนเข้าบัญชี
-            </label>
-            {receiveMethod === "transfer" && (
-              <input
-                type="text"
-                className="w-full mt-1 px-2 py-1 border rounded"
-                placeholder="รายละเอียดบัญชีที่รับโอน"
-                value={receiveMethodNote}
-                onChange={(e) => setReceiveMethodNote(e.target.value)}
-              />
-            )}
-          </div>
-        </div>
+        <input type="hidden" name="paymethod" value="cash" />
+        <input type="hidden" name="receivemethod" value="cash" />
         <div className="text-right bg-black text-green-400 px-6 py-4 text-4xl font-bold rounded shadow h-fit">
           ยอดรวม: {totalSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
           <span className="text-sm">THB</span>
@@ -408,7 +320,7 @@ function ExchangePage() {
                         }`}
                         onClick={() => {
                           setSelectedUnit(c.content);
-                          setRate(c.sell); // use 'sell' for selling page
+                          setRate(c.selllaos); // use 'sell' for selling page
                           setTimeout(() => {
                             amountRef.current?.focus();
                           }, 0);

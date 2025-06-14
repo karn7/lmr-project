@@ -11,6 +11,7 @@ export async function POST(req) {
     const {
       items,
       employee,
+      employeeCode,
       shiftNo, 
       branch,
       customerName,
@@ -26,6 +27,7 @@ export async function POST(req) {
     console.log("📥 Incoming record data:", {
       items,
       employee,
+      employeeCode,
       shiftNo, 
       branch,
       customerName,
@@ -39,7 +41,7 @@ export async function POST(req) {
     });
 
     const prefix = payType === "Selling" ? "S" : payType === "Buying" ? "B" : "A";
-    const docNumber = await generateDocNumber(prefix);
+    const docNumber = await generateDocNumber(prefix, employee, employeeCode);
 
     const newRecord = new Record({
       docNumber,

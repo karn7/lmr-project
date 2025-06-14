@@ -12,9 +12,9 @@ export async function GET(req, { params }) {
 
 export async function PUT(req, { params }) {
     const { id } = params;
-    const { newName: name, newEmail: email, newPassword: password } = await req.json();
+    const { newName: name, newEmail: email, newPassword: password, newRole: role, newBranch: branch, newCountry: country, newEmployeeCode: employeeCode } = await req.json();
     const hashedPassword = await bcrypt.hash(password, 10);
     await connectMongoDB();
-    await User.findByIdAndUpdate(id, { name, email, password: hashedPassword });
+    await User.findByIdAndUpdate(id, { name, email, password: hashedPassword, role, branch, country, employeeCode });
     return NextResponse.json({ message: "User updated" }, { status: 200 })
 }

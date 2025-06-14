@@ -26,6 +26,8 @@ function AdminEditUserPage({ params }) {
     const [newPassword, setNewPassword] = useState("");
     const [newRole, setNewRole] = useState("");
     const [newBranch, setNewBranch] = useState("");
+    const [newCountry, setNewCountry] = useState("");
+    const [newEmployeeCode, setNewEmployeeCode] = useState("");
 
     const router = useRouter();
 
@@ -67,7 +69,9 @@ function AdminEditUserPage({ params }) {
                     newEmail: newEmail || userOldData?.email,
                     newPassword: newPassword || userOldData?.password,
                     newRole: newRole || userOldData?.role,
-                    newBranch: newBranch || userOldData?.branch
+                    newBranch: newBranch || userOldData?.branch,
+                    newCountry: newCountry || userOldData?.country,
+                    newEmployeeCode: newEmployeeCode || userOldData?.employeeCode
                 })
             })
 
@@ -109,6 +113,20 @@ function AdminEditUserPage({ params }) {
                           placeholder={userOldData?.branch || "Branch"}
                           onChange={(e) => setNewBranch(e.target.value)}
                           value={newBranch}
+                        />
+                        <input
+                          type="text"
+                          className='w-[300px] block bg-gray-200 border py-2 px-3 rounded text-lg my-2'
+                          placeholder={userOldData?.country || "Country"}
+                          onChange={(e) => setNewCountry(e.target.value)}
+                          value={newCountry}
+                        />
+                        <input
+                          type="text"
+                          className='w-[300px] block bg-gray-200 border py-2 px-3 rounded text-lg my-2'
+                          placeholder={userOldData?.employeeCode || "Employee Code"}
+                          onChange={(e) => setNewEmployeeCode(e.target.value)}
+                          value={newEmployeeCode}
                         />
                         <button type='submit' name='update' className='bg-green-500 text-white border py-2 px-3 rounded text-lg my-2'>Update User</button>
                     </form>

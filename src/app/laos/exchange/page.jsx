@@ -1,23 +1,22 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Container from "../components/Container";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import UserSideNav from "../components/userSideNav";
+import UserSideNav from "../components/laosSideNav";
 import Link from "next/link";
 import Image from "next/image";
-import Container from "../components/Container";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
-import DeleteBtn from "./DeleteBtn";
 import { format } from "date-fns";
 
 function WelcomePage() {
   const { data: session } = useSession();
   if (!session) redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`);
-  // Redirect to homepage if user is not from Thailand
-  if (session?.user?.country !== "Thai") {
-    redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/`);
+  // Redirect to /mainthai if user is from Thailand
+  if (session?.user?.country === "Thai") {
+    redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/mainthai`);
   }
   console.log(session);
 
@@ -113,12 +112,12 @@ function WelcomePage() {
 
               <div className="flex justify-between mb-6">
                 <div className="flex gap-4">
-                  <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/buying`}>
+                  <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/laos/buying`}>
                     <button className="bg-green-500 text-white py-2 px-3 rounded-md text-lg hover:bg-green-600">
                       Buy
                     </button>
                   </Link>
-                  <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/selling`}>
+                  <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/laos/selling`}>
                     <button className="bg-green-500 text-white py-2 px-3 rounded-md text-lg hover:bg-green-600">
                       Sell
                     </button>
@@ -128,7 +127,7 @@ function WelcomePage() {
                       Wechat
                     </button>
                   </Link>
-                  <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/withdraw`}>
+                  <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/laos/withdraw`}>
                     <button className="bg-blue-500 text-white py-2 px-3 rounded-md text-lg hover:bg-blue-600">
                       Withdraw
                     </button>

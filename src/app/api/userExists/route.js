@@ -5,9 +5,11 @@ import User from "../../../../models/user";
 export async function POST(req) {
     try {
         await connectMongoDB();
-        const { email } = await req.json();
-        const user = await User.findOne({ email }).select("_id");
-        console.log("User: ", user)
+        const { email, employeeCode } = await req.json();
+        const user = await User.findOne({
+            $or: [{ email }, { employeeCode }]
+        }).select("_id");
+        console.log("Matched User by email or employeeCode:", user)
 
         return NextResponse.json({ user })
 

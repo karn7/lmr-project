@@ -136,6 +136,7 @@ function LotteryPage() {
         customerName,
         note,
         employee: session?.user?.name || "",
+        employeeCode: session?.user?.employeeCode || "",
         branch: session?.user?.branch || "",
         shiftNo: currentShift.shiftNo || "",
         items: lotteryItems.map(item => ({

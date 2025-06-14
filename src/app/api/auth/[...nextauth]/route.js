@@ -53,6 +53,7 @@ const authOptions = {
                     role: user.role,
                     branch: user.branch,
                     country: user.country,
+                    employeeCode: user.employeeCode,
                     lastLoginDate: new Date().toISOString()
                 }
             }
@@ -68,6 +69,7 @@ const authOptions = {
                     role: token.role,
                     branch: token.branch,
                     country: token.country,
+                    employeeCode: token.employeeCode,
                     lastLoginDate: token.lastLoginDate
                 }
             }

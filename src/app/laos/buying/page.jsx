@@ -16,46 +16,42 @@ function ExchangePage() {
   const [rate, setRate] = useState("");
   const [amount, setAmount] = useState("");
   const [records, setRecords] = useState([]);
-  const [payType, setPayType] = useState("Selling");
+  const [payType, setPayType] = useState("Buying");
   const [payMethod, setPayMethod] = useState("cash");
   const [payMethodNote, setPayMethodNote] = useState("");
   const [receiveMethod, setReceiveMethod] = useState("cash");
   const [receiveMethodNote, setReceiveMethodNote] = useState("");
   const [customerName, setCustomerName] = useState("");
-  const [branch, setBranch] = useState("สาขา 1");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [docNumber, setDocNumber] = useState("");
   const [note, setNote] = useState("");
   const [currentShift, setCurrentShift] = useState(null);
+
   const router = useRouter();
 
-
-
   useEffect(() => {
-      const fetchCurrencies = async () => {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/posts`);
-        const data = await res.json();
-        const filtered = data.posts.filter((c) => c.title !== "THB");
-        setCurrencies(filtered);
-      };
-    
-      fetchCurrencies();
-    }, []);
+    const fetchCurrencies = async () => {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/posts`);
+      const data = await res.json();
+      const filtered = data.posts.filter((c) => c.title !== "LAK");
+      setCurrencies(filtered);
+    };
+  
+    fetchCurrencies();
+  }, []);
 
   useEffect(() => {
     const fetchShift = async () => {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/check?employee=${session?.user?.name}`);
+      if (!session?.user?.name) return;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/check?employee=${session.user.name}`);
       const data = await res.json();
-      if (data?.open && data?.shiftNo) {
+      if (data?.shiftNo) {
         setCurrentShift(data);
       } else {
-        console.warn("ไม่พบข้อมูลการเปิดร้านหรือร้านถูกปิดแล้ว");
+        console.warn("ไม่พบข้อมูลรอบที่เปิดอยู่");
       }
     };
-
-    if (session?.user?.name) {
-      fetchShift();
-    }
+    fetchShift();
   }, [session?.user?.name]);
 
   const handleSelectCurrency = (currency) => {
@@ -66,10 +62,12 @@ function ExchangePage() {
 
   const handleAddRecord = () => {
     if (!selectedCurrency || !rate || !amount) return;
+
+    const unitToUse = selectedUnit === "-" ? "" : selectedUnit;
     const total = parseFloat((parseFloat(rate) * parseFloat(amount)).toFixed(2));
     const newRecord = {
       currency: selectedCurrency.title,
-      unit: selectedUnit === "-" ? "" : selectedUnit,
+      unit: unitToUse,
       rate,
       amount,
       total,
@@ -97,27 +95,9 @@ function ExchangePage() {
   );
   const amountRef = useRef(null);
 
-  // Auto set rate for currency with single unit (content == "-") on select
-  useEffect(() => {
-    if (
-      selectedCurrency &&
-      filteredUnits.length === 1 &&
-      filteredUnits[0].content.trim() === "-"
-    ) {
-      setSelectedUnit("");
-      setRate(filteredUnits[0].sell);
-      setTimeout(() => {
-        amountRef.current?.focus();
-      }, 0);
-    }
-    // do not clear rate if user edits it
-    // eslint-disable-next-line
-  }, [selectedCurrency]);
-
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Enter") {
-        if (!selectedCurrency || !rate || !amount) return;
         handleAddRecord();
       }
     };
@@ -127,11 +107,28 @@ function ExchangePage() {
     };
   }, [selectedCurrency, selectedUnit, rate, amount]);
 
+  // ดึงเรทอัตโนมัติเมื่อเลือกสกุลที่มีหน่วยเดียวและ content เป็น "-"
+  useEffect(() => {
+    if (
+      selectedCurrency &&
+      filteredUnits.length === 1 &&
+      filteredUnits[0].content.trim() === "-"
+    ) {
+      setSelectedUnit("");
+      setRate(filteredUnits[0].buylaos);
+      setTimeout(() => {
+        amountRef.current?.focus();
+      }, 0);
+    }
+  }, [selectedCurrency]);
+
   const handleSave = async () => {
     const confirmSave = confirm("คุณต้องการบันทึกรายการหรือไม่?");
     if (!confirmSave) return;
-
     try {
+      // Force payMethod and receiveMethod to "cash"
+      const payMethodFixed = "cash";
+      const receiveMethodFixed = "cash";
       const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/record`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -140,31 +137,32 @@ function ExchangePage() {
           date,
           employee: session?.user?.name || "",
           employeeCode: session?.user?.employeeCode || "",
+          shiftNo: currentShift?.shiftNo || "",
           customerName,
           note,
           branch: session?.user?.branch || "",
           payType,
-          payMethod,
+          payMethod: payMethodFixed,
           payMethodNote,
-          receiveMethod,
+          receiveMethod: receiveMethodFixed,
           receiveMethodNote,
           total: totalSum,
           items: records,
           timestamp: new Date().toISOString(),
-          shiftNo: currentShift?.shiftNo || "",
         }),
       });
 
       if (res.ok) {
         const { docNumber } = await res.json();
 
-        if (payMethod !== "transfer") {
+        if (receiveMethod !== "transfer") {
+          // ส่งยอดรวม THB เป็น decrease ก่อน
           const payloadTHB = {
             docNumber,
             employee: session?.user?.name || "",
             shiftNo: currentShift?.shiftNo,
             totalTHB: totalSum,
-            action: "increase",
+            action: "decrease",
           };
           console.log("📤 ส่งข้อมูล update-cash สำหรับ THB:", payloadTHB);
           await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/update-cash`, {
@@ -174,7 +172,7 @@ function ExchangePage() {
           });
         }
 
-        if (receiveMethod !== "transfer") {
+        if (payMethod !== "transfer") {
           for (const record of records) {
             const payload = {
               docNumber,
@@ -182,7 +180,7 @@ function ExchangePage() {
               shiftNo: currentShift?.shiftNo,
               currency: record.currency,
               amount: parseFloat(record.amount),
-              action: "decrease",
+              action: "increase",
             };
             console.log("📤 ส่งข้อมูล update-cash:", payload);
             await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/update-cash`, {
@@ -211,7 +209,7 @@ function ExchangePage() {
     <div className="bg-orange-500 min-h-screen p-4 text-black">
       <div className="flex justify-between items-start">
         <Link
-          href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/welcome`}
+          href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/laos/exchange`}
           className="bg-gray-500 inline-block text-white border py-2 px-3 rounded my-2"
         >
           กลับ
@@ -267,96 +265,42 @@ function ExchangePage() {
         </div>
         <div className="grid grid-cols-2 gap-2 bg-white p-4 rounded shadow mt-2 text-sm">
           <div>
-            <div>ประเภทลูกค้า</div>
+            <div>ประเภทการซื้อ</div>
             <label>
               <input
                 type="radio"
                 name="ptype"
-                value="Selling"
-                checked={payType === "Selling"}
-                onChange={() => setPayType("Selling")}
+                value="Buying"
+                checked={payType === "Buying"}
+                onChange={() => setPayType("Buying")}
               />{" "}
-              Selling
+              Buying
             </label>
             <label className="ml-4">
               <input
                 type="radio"
                 name="ptype"
-                value="NP(S)"
-                checked={payType === "NP(S)"}
-                onChange={() => setPayType("NP(S)")}
+                value="Unusable"
+                checked={payType === "Unusable"}
+                onChange={() => setPayType("Unusable")}
               />{" "}
-              NP
+              เงินมีตำหนิ
             </label>
           </div>
-          <div>
-            <div>ลูกค้าจ่ายเงินเป็น</div>
-            <label>
-              <input
-                type="radio"
-                name="paymethod"
-                value="cash"
-                checked={payMethod === "cash"}
-                onChange={() => setPayMethod("cash")}
-              />{" "}
-              เงินสด
-            </label>
-            <label className="ml-4">
-              <input
-                type="radio"
-                name="paymethod"
-                value="transfer"
-                checked={payMethod === "transfer"}
-                onChange={() => setPayMethod("transfer")}
-              />{" "}
-              โอนเข้าบัญชี
-            </label>
-            {payMethod === "transfer" && (
-              <input
-                type="text"
-                className="w-full mt-1 px-2 py-1 border rounded"
-                placeholder="รายละเอียดบัญชีที่โอนเข้า"
-                value={payMethodNote}
-                onChange={(e) => setPayMethodNote(e.target.value)}
-              />
-            )}
+          <div className="hidden">
+            <input type="hidden" value="cash" />
           </div>
           <div></div>
-          <div>
-            <div>ลูกค้ารับเงินเป็น</div>
-            <label>
-              <input
-                type="radio"
-                name="receivemethod"
-                value="cash"
-                checked={receiveMethod === "cash"}
-                onChange={() => setReceiveMethod("cash")}
-              />{" "}
-              เงินสด
-            </label>
-            <label className="ml-4">
-              <input
-                type="radio"
-                name="receivemethod"
-                value="transfer"
-                checked={receiveMethod === "transfer"}
-                onChange={() => setReceiveMethod("transfer")}
-              />{" "}
-              โอนเข้าบัญชี
-            </label>
-            {receiveMethod === "transfer" && (
-              <input
-                type="text"
-                className="w-full mt-1 px-2 py-1 border rounded"
-                placeholder="รายละเอียดบัญชีที่รับโอน"
-                value={receiveMethodNote}
-                onChange={(e) => setReceiveMethodNote(e.target.value)}
-              />
-            )}
+          <div className="hidden">
+            <input type="hidden" value="cash" />
           </div>
         </div>
         <div className="text-right bg-black text-green-400 px-6 py-4 text-4xl font-bold rounded shadow h-fit">
-          ยอดรวม: {totalSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
+          ยอดรวม:{" "}
+          {totalSum.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}{" "}
           <span className="text-sm">THB</span>
         </div>
       </div>
@@ -373,7 +317,7 @@ function ExchangePage() {
                   ? "ring-2 ring-yellow-300"
                   : ""
               }`}
-              style={{ padding: 0, width: "76px", height: "46px" }}
+              style={{ padding: 0, width: "76px", height: "52px" }}
             >
               <div className="relative w-full h-full">
                 <img
@@ -389,7 +333,6 @@ function ExchangePage() {
           ))}
         </div>
 
-        {/* Right Panel */}
         <div className="flex flex-col gap-4 w-3/4">
           {selectedCurrency && (
             <>
@@ -397,7 +340,8 @@ function ExchangePage() {
                 <div className="mb-2">เลือกหน่วย</div>
                 <div className="flex flex-wrap gap-2">
                   {filteredUnits.map((c, i) => {
-                    const isDashUnit = c.content.trim() === "-";
+                    if (c.content.trim() === "-") return null;
+
                     return (
                       <button
                         key={i}
@@ -408,13 +352,13 @@ function ExchangePage() {
                         }`}
                         onClick={() => {
                           setSelectedUnit(c.content);
-                          setRate(c.sell); // use 'sell' for selling page
+                          setRate(c.buylaos);
                           setTimeout(() => {
                             amountRef.current?.focus();
                           }, 0);
                         }}
                       >
-                        {isDashUnit ? "-" : c.content}
+                        {c.content}
                       </button>
                     );
                   })}
@@ -428,6 +372,7 @@ function ExchangePage() {
                     className="w-full px-2 py-1 border rounded"
                     value={rate}
                     onChange={(e) => setRate(e.target.value)}
+                    disabled={payType !== "Unusable"}
                   />
                 </div>
                 <div>
@@ -473,8 +418,15 @@ function ExchangePage() {
                     <td className="border p-2">{r.currency}</td>
                     <td className="border p-2">{r.unit}</td>
                     <td className="border p-2">{r.rate}</td>
-                    <td className="border p-2">{Number(r.amount).toLocaleString()}</td>
-                    <td className="border p-2">{r.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="border p-2">
+                      {Number(r.amount).toLocaleString()}
+                    </td>
+                    <td className="border p-2">
+                      {r.total.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
                     <td className="border p-2 text-center">
                       <button
                         onClick={() => handleDelete(i)}
@@ -490,7 +442,9 @@ function ExchangePage() {
           </div>
 
           <div className="mt-4">
-            <label className="block text-white font-semibold mb-1">หมายเหตุ</label>
+            <label className="block text-white font-semibold mb-1">
+              หมายเหตุ
+            </label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}

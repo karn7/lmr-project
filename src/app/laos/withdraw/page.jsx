@@ -1,14 +1,35 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import Container from "../components/Container";
 import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import UserSideNav from "../components/userSideNav";
 import Link from "next/link";
 import Image from "next/image";
-import Container from "../components/Container";
 import { useSession, signOut } from "next-auth/react";
 import { redirect } from "next/navigation";
+import Footer from "../components/Footer";
+
+const calculateFee = (amount, currency, smallNoteCount = 0) => {
+  const amt = parseFloat(amount || "0");
+  const min = currency === "LAK" ? 10000 : 15000;
+  let fee = 0;
+  if (amt <= 10000000) fee = min;
+  else if (amt <= 15000000) fee = 15000;
+  else if (amt <= 20000000) fee = 20000;
+  else if (amt <= 25000000) fee = 25000;
+  else if (amt <= 35000000) fee = 35000;
+  else if (amt <= 45000000) fee = 45000;
+  else if (amt <= 55000000) fee = 55000;
+  else if (amt <= 65000000) fee = 65000;
+  else if (amt <= 75000000) fee = 75000;
+  else if (amt <= 85000000) fee = 85000;
+  else if (amt <= 95000000) fee = 95000;
+  else if (amt <= 100000000) fee = 105000;
+  else fee = Math.ceil(amt * 0.00115);
+
+  const extra = Math.ceil(parseInt(smallNoteCount || "0", 10) / 30) * 5000;
+  return fee + extra;
+};
 
 function WithdrawPage() {
   const { data: session } = useSession();
@@ -49,9 +70,41 @@ function WithdrawPage() {
   const [amount, setAmount] = useState("");
   const [fee, setFee] = useState("50");
   const [transactionType, setTransactionType] = useState("withdraw");
-  const [feeCurrency, setFeeCurrency] = useState("THB");
+  const [smallNoteCount, setSmallNoteCount] = useState("0");
+  // New channel state
+  const [channel, setChannel] = useState("NOUKKY");
 
-  const feeCurrencyText = feeCurrency === "THB" ? "บาท" : feeCurrency === "LAK" ? "กีบ" : "ดอลลาร์";
+  const [exchangeRates, setExchangeRates] = useState({ THB: 0, USD: 0 });
+
+  useEffect(() => {
+    const fetchRates = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/posts`);
+        const data = await res.json();
+        const rates = { THB: 0, USD: 0 };
+        data.posts.forEach(post => {
+          if (post.title === "THB") rates.THB = parseFloat(post.selllaos || 0);
+          if (post.title === "USD") rates.USD = parseFloat(post.selllaos || 0);
+        });
+        setExchangeRates(rates);
+      } catch (err) {
+        console.error("Error fetching exchange rates", err);
+      }
+    };
+    fetchRates();
+  }, []);
+
+  const calculateConvertedAmount = useCallback(() => {
+    const amt = parseFloat(amount || "0");
+    if (currency === "THB") return amt * exchangeRates.THB;
+    if (currency === "USD") return amt * exchangeRates.USD;
+    return amt;
+  }, [amount, currency, exchangeRates]);
+
+  useEffect(() => {
+    const converted = calculateConvertedAmount();
+    setFee(calculateFee(converted, currency, smallNoteCount));
+  }, [amount, currency, smallNoteCount, calculateConvertedAmount]);
 
   useEffect(() => {
     const fetchShift = async () => {
@@ -81,7 +134,7 @@ function WithdrawPage() {
           total: parseFloat(amount || "0"),
         },
         {
-          currency: feeCurrency,
+          currency: "LAK",
           unit: "Fee",
           rate: "",
           amount: "",
@@ -103,6 +156,9 @@ function WithdrawPage() {
         note,
         items,
         total: totalAmount,
+        ...(transactionType === "deposit"
+          ? { receiveMethodNote: channel }
+          : { payMethodNote: channel }),
       };
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/record`, {
@@ -148,7 +204,7 @@ function WithdrawPage() {
           },
           body: JSON.stringify({
             ...updateCashBase,
-            currency: feeCurrency,
+            currency: "LAK",
             amount: parseFloat(fee || "0"),
             action: "increase",
           }),
@@ -175,7 +231,7 @@ function WithdrawPage() {
           },
           body: JSON.stringify({
             ...updateCashBase,
-            currency: feeCurrency,
+            currency: "LAK",
             amount: parseFloat(fee || "0"),
             action: "increase",
           }),
@@ -191,7 +247,7 @@ function WithdrawPage() {
 
     } catch (err) {
       console.error("Error saving record:", err);
-      alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+      alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์เวอร์");
     } finally {
       setIsSaving(false);
     }
@@ -204,7 +260,7 @@ function WithdrawPage() {
         <div className="container mx-auto my-10 px-5">
           <div className="bg-white shadow-md rounded-lg p-6 space-y-6">
             <div className="flex justify-between items-center">
-              <Link href="/welcome">
+              <Link href="/laos/exchange">
                 <button className="text-sm text-blue-600 hover:underline">← กลับ</button>
               </Link>
               <h2 className="text-xl font-semibold text-gray-700">ฝาก-ถอน</h2>
@@ -232,30 +288,57 @@ function WithdrawPage() {
               </div>
             </div>
 
-            <div className="flex items-center space-x-6 text-lg font-semibold">
-              <label>ประเภทรายการ:</label>
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  name="transactionType"
-                  value="deposit"
-                  checked={transactionType === "deposit"}
-                  onChange={() => setTransactionType("deposit")}
-                  className="form-radio"
-                />
-                <span className="ml-1">ฝากเงิน</span>
-              </label>
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  name="transactionType"
-                  value="withdraw"
-                  checked={transactionType === "withdraw"}
-                  onChange={() => setTransactionType("withdraw")}
-                  className="form-radio"
-                />
-                <span className="ml-1">ถอนเงิน</span>
-              </label>
+            <div className="space-y-4 text-lg font-semibold">
+              <div className="flex items-center space-x-6">
+                <label>ประเภทรายการ:</label>
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    name="transactionType"
+                    value="deposit"
+                    checked={transactionType === "deposit"}
+                    onChange={() => setTransactionType("deposit")}
+                    className="form-radio"
+                  />
+                  <span className="ml-1">ฝากเงิน</span>
+                </label>
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    name="transactionType"
+                    value="withdraw"
+                    checked={transactionType === "withdraw"}
+                    onChange={() => setTransactionType("withdraw")}
+                    className="form-radio"
+                  />
+                  <span className="ml-1">ถอนเงิน</span>
+                </label>
+              </div>
+              <div className="flex items-center space-x-4">
+                <label className="font-medium">ช่องทาง:</label>
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    name="channel"
+                    value="NOUKKY"
+                    checked={channel === "NOUKKY"}
+                    onChange={() => setChannel("NOUKKY")}
+                    className="form-radio"
+                  />
+                  <span className="ml-1">NOUKKY</span>
+                </label>
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    name="channel"
+                    value="BECOME"
+                    checked={channel === "BECOME"}
+                    onChange={() => setChannel("BECOME")}
+                    className="form-radio"
+                  />
+                  <span className="ml-1">BECOME</span>
+                </label>
+              </div>
             </div>
 
             {/* New currency, amount, fee inputs */}
@@ -325,50 +408,32 @@ function WithdrawPage() {
                 />
               </div>
 
-              <div className="border rounded p-3 flex flex-col">
-                <label className="font-medium">ค่าธรรมเนียม ({feeCurrencyText}):</label>
-                <input
-                  type="number"
-                  value={fee}
-                  onChange={(e) => setFee(e.target.value)}
-                  className="border px-2 py-1 w-full sm:w-24"
-                  placeholder="50"
-                />
-                <div className="flex space-x-4 mt-2">
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      name="feeCurrency"
-                      value="THB"
-                      checked={feeCurrency === "THB"}
-                      onChange={() => setFeeCurrency("THB")}
-                      className="form-radio"
-                    />
-                    <span className="ml-1">THB</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      name="feeCurrency"
-                      value="LAK"
-                      checked={feeCurrency === "LAK"}
-                      onChange={() => setFeeCurrency("LAK")}
-                      className="form-radio"
-                    />
-                    <span className="ml-1">LAK</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      name="feeCurrency"
-                      value="USD"
-                      checked={feeCurrency === "USD"}
-                      onChange={() => setFeeCurrency("USD")}
-                      className="form-radio"
-                    />
-                    <span className="ml-1">USD</span>
-                  </label>
+              <div className="flex flex-row space-x-4">
+                <div className="border rounded p-3 flex flex-col">
+                  <label className="font-medium">ค่าธรรมเนียม (กีบ):</label>
+                  <input
+                    type="text"
+                    value={fee ? Number(fee).toLocaleString("th-TH") : ""}
+                    readOnly
+                    className="border px-2 py-1 w-full sm:w-24 bg-gray-100 text-gray-600"
+                    placeholder="0"
+                  />
                 </div>
+                {transactionType === "deposit" && (currency === "THB" || currency === "USD") && (
+                  <div className="border rounded p-3 flex flex-col sm:ml-4">
+                    <label className="font-medium">ใบเล็ก (จำนวนกี่ใบ):</label>
+                    <input
+                      type="text"
+                      value={smallNoteCount}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/[^0-9]/g, "");
+                        setSmallNoteCount(raw);
+                      }}
+                      className="border px-2 py-1 w-full sm:w-24"
+                      placeholder="0"
+                    />
+                  </div>
+                )}
               </div>
             </div>
 

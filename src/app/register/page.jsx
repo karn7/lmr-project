@@ -17,6 +17,7 @@ function RegisterPage() {
     const [role, setRole] = useState("");
     const [branch, setBranch] = useState("");
     const [country, setCountry] = useState("");
+    const [employeeCode, setEmployeeCode] = useState("");
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
@@ -39,7 +40,7 @@ function RegisterPage() {
             return;
         }
 
-        if (!name || !email || !password || !confirmPassword || !role || !branch || !country) {
+        if (!name || !email || !password || !confirmPassword || !role || !branch || !country || !employeeCode) {
             setError("Please complete all inputs");
             return;
         }
@@ -51,7 +52,7 @@ function RegisterPage() {
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ email })
+                body: JSON.stringify({ email, employeeCode })
             })
 
             const { user } = await resUserExists.json();
@@ -67,7 +68,7 @@ function RegisterPage() {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    name, email, password, role, country, branch
+                    name, email, password, role, country, branch, employeeCode
                 })
             })
 
@@ -107,6 +108,12 @@ function RegisterPage() {
                                 </div>
                             )}
 
+                            <input
+                                type="text"
+                                onChange={(e) => setEmployeeCode(e.target.value)}
+                                className='w-full bg-gray-200 border py-2 px-3 rounded text-lg my-2'
+                                placeholder='รหัสพนักงาน'
+                            />
                             <input type="text" onChange={(e) => setName(e.target.value)} className='w-full bg-gray-200 border py-2 px-3 rounded text-lg my-2' placeholder='ชื่อพนักงาน' />
                             <input type="text" onChange={(e) => setEmail(e.target.value)} className='w-full bg-gray-200 border py-2 px-3 rounded text-lg my-2' placeholder='Username' />
                             <input type="password" onChange={(e) => setPassword(e.target.value)} className='w-full bg-gray-200 border py-2 px-3 rounded text-lg my-2' placeholder='Password' />

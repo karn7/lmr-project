@@ -25,7 +25,11 @@ const userSchema = new Schema(
         country: {
             type: String,
             required: false,
-        }
+        },
+        employeeCode: {
+            type: String,
+            required: false,
+        },
     },
     { timestamps: true }
 )
