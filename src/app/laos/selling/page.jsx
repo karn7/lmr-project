@@ -27,7 +27,19 @@ function ExchangePage() {
   const [docNumber, setDocNumber] = useState("");
   const [note, setNote] = useState("");
   const [currentShift, setCurrentShift] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const router = useRouter();
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
 
 
@@ -128,8 +140,15 @@ function ExchangePage() {
   }, [selectedCurrency, selectedUnit, rate, amount]);
 
   const handleSave = async () => {
+    if (!isOnline) {
+      alert("ไม่สามารถบันทึกได้เนื่องจากไม่มีการเชื่อมต่ออินเทอร์เน็ต");
+      return;
+    }
+
     const confirmSave = confirm("คุณต้องการบันทึกรายการหรือไม่?");
     if (!confirmSave) return;
+
+    setIsSaving(true);
 
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/record`, {
@@ -157,16 +176,14 @@ function ExchangePage() {
 
       if (res.ok) {
         const { docNumber } = await res.json();
-
         if (payMethod !== "transfer") {
           const payloadTHB = {
             docNumber,
             employee: session?.user?.name || "",
             shiftNo: currentShift?.shiftNo,
-            totalTHB: totalSum,
+            totalLAK: totalSum,
             action: "increase",
           };
-          console.log("📤 ส่งข้อมูล update-cash สำหรับ THB:", payloadTHB);
           await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/update-cash`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -184,7 +201,6 @@ function ExchangePage() {
               amount: parseFloat(record.amount),
               action: "decrease",
             };
-            console.log("📤 ส่งข้อมูล update-cash:", payload);
             await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/update-cash`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -204,6 +220,8 @@ function ExchangePage() {
       }
     } catch (error) {
       console.error("Error saving record:", error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -268,8 +286,8 @@ function ExchangePage() {
         <input type="hidden" name="paymethod" value="cash" />
         <input type="hidden" name="receivemethod" value="cash" />
         <div className="text-right bg-black text-green-400 px-6 py-4 text-4xl font-bold rounded shadow h-fit">
-          ยอดรวม: {totalSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
-          <span className="text-sm">THB</span>
+          ยอดรวม: {Number.isInteger(totalSum) ? totalSum.toLocaleString() : totalSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
+          <span className="text-sm">LAK</span>
         </div>
       </div>
 
@@ -415,8 +433,9 @@ function ExchangePage() {
             <button
               onClick={handleSave}
               className="bg-green-600 text-white py-2 px-6 rounded text-lg"
+              disabled={isSaving}
             >
-              บันทึกรายการ
+              {isSaving ? "กำลังบันทึกข้อมูล..." : "บันทึกรายการ"}
             </button>
           </div>
         </div>

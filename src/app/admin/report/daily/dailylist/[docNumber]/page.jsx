@@ -581,10 +581,10 @@ export default function Page({ params }) {
       <div className="mt-6 bg-yellow-100 text-yellow-900 text-lg font-bold p-4 rounded-md shadow-md max-w-max">
         <p>
           <strong>จำนวนรวมทั้งหมด:</strong>{" "}
-          {(isEditing ? editableRecord.total : record.total).toLocaleString("th-TH", {
+          {(isEditing ? editableRecord?.total : record?.total)?.toLocaleString("th-TH", {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
-          })}
+          }) ?? "-"}
         </p>
       </div>
 

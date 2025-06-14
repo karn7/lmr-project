@@ -27,6 +27,7 @@ function ExchangePage() {
   const [docNumber, setDocNumber] = useState("");
   const [note, setNote] = useState("");
   const [currentShift, setCurrentShift] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
 
 
@@ -128,9 +129,15 @@ function ExchangePage() {
   }, [selectedCurrency, selectedUnit, rate, amount]);
 
   const handleSave = async () => {
+    if (!navigator.onLine) {
+      alert("ไม่สามารถบันทึกได้ เนื่องจากไม่มีการเชื่อมต่ออินเทอร์เน็ต");
+      return;
+    }
+
     const confirmSave = confirm("คุณต้องการบันทึกรายการหรือไม่?");
     if (!confirmSave) return;
 
+    setIsSaving(true);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/record`, {
         method: "POST",
@@ -204,6 +211,8 @@ function ExchangePage() {
       }
     } catch (error) {
       console.error("Error saving record:", error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -502,9 +511,10 @@ function ExchangePage() {
           <div className="flex justify-end">
             <button
               onClick={handleSave}
-              className="bg-green-600 text-white py-2 px-6 rounded text-lg"
+              disabled={isSaving}
+              className={`py-2 px-6 rounded text-lg ${isSaving ? "bg-gray-400 cursor-not-allowed" : "bg-green-600 text-white"}`}
             >
-              บันทึกรายการ
+              {isSaving ? "กำลังบันทึกข้อมูล..." : "บันทึกรายการ"}
             </button>
           </div>
         </div>

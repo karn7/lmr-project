@@ -122,7 +122,7 @@ function WelcomePage() {
                       Sell
                     </button>
                   </Link>
-                  <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/wechat`}>
+                  <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/laos/wechat`}>
                     <button className="bg-blue-500 text-white py-2 px-3 rounded-md text-lg hover:bg-blue-600">
                       Wechat
                     </button>
@@ -132,9 +132,14 @@ function WelcomePage() {
                       Withdraw
                     </button>
                   </Link>
-                  <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/lot`}>
+                  <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/laos/moneygram`}>
                     <button className="bg-purple-500 text-white py-2 px-3 rounded-md text-lg hover:bg-purple-600">
-                      Lot
+                      Moneygram
+                    </button>
+                  </Link>
+                  <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/laos/thailaos`}>
+                    <button className="bg-yellow-500 text-white py-2 px-3 rounded-md text-lg hover:bg-yellow-600">
+                      Thai-Laos
                     </button>
                   </Link>
                 </div>
@@ -176,7 +181,8 @@ function WelcomePage() {
                       </td>
                       <td className="border px-3 py-1">
                         {Number(record.total).toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
                         })}
                       </td>
                       <td className="border px-3 py-1">{record.payType}</td>

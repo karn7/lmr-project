@@ -1,14 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import UserSideNav from "../components/userSideNav";
 import Link from "next/link";
 import Image from "next/image";
-import Container from "../components/Container";
 import { useSession, signOut } from "next-auth/react";
 import { redirect } from "next/navigation";
+import Container from "../components/Container";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 
 function WelcomePage() {
   const { data: session } = useSession();
@@ -46,7 +45,7 @@ function WelcomePage() {
 
   const [customerName, setCustomerName] = useState("");
   const [exchangeAmount, setExchangeAmount] = useState("");
-  const [totalTHB, setTotalTHB] = useState("");
+  const [totalLAK, setTotalLAK] = useState("");
   const [note, setNote] = useState("");
 
   const [isSaving, setIsSaving] = useState(false);
@@ -90,12 +89,12 @@ function WelcomePage() {
 
   useEffect(() => {
     const matchedPost = postData.find(p => p.title === "CNY" && p.content === "100-50");
-    const rate = parseFloat(matchedPost?.buy || "0");
+    const rate = parseFloat(matchedPost?.buylaos || "0");
     const amount = parseFloat(exchangeAmount);
     if (!isNaN(rate) && !isNaN(amount)) {
-      setTotalTHB((rate * amount).toFixed(2));
+      setTotalLAK((rate * amount).toFixed(2));
     } else {
-      setTotalTHB("");
+      setTotalLAK("");
     }
   }, [postData, exchangeAmount]);
 
@@ -116,7 +115,7 @@ function WelcomePage() {
               currency: "CNY",
               rate: parseFloat(postData.find(p => p.title === "CNY" && p.content === "100-50")?.buy || "0"),
               amount: parseFloat(exchangeAmount),
-              total: parseFloat(totalTHB)
+              total: parseFloat(totalLAK)
             }
           ],
           employee: session?.user?.name,
@@ -129,7 +128,7 @@ function WelcomePage() {
           payMethodNote: "",
           receiveMethod: "เงินสด",
           receiveMethodNote: "",
-          total: parseFloat(totalTHB),
+          total: parseFloat(totalLAK),
           note
         })
       });
@@ -138,21 +137,21 @@ function WelcomePage() {
       if (res.ok) {
         setDocNumber(data.docNumber);
 
-        const payloadTHB = {
+        const payloadLAK = {
           docNumber: data.docNumber,
           employee: session?.user?.name || "",
           shiftNo: currentShift?.shiftNo || "",
-          totalTHB: parseFloat(totalTHB),
+          totalLAK: parseFloat(totalLAK),
           action: "decrease",
         };
-        console.log("📤 ส่งข้อมูล update-cash สำหรับ THB:", payloadTHB);
+        console.log("📤 ส่งข้อมูล update-cash สำหรับ LAK:", payloadLAK);
         await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/update-cash`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payloadTHB),
+          body: JSON.stringify(payloadLAK),
         });
 
-        const total = parseFloat(totalTHB).toFixed(2);
+        const total = parseFloat(totalLAK).toFixed(2);
         window.open(
           `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/printreceipt?docNumber=${data.docNumber}&total=${total}`,
           "_blank",
@@ -176,7 +175,7 @@ function WelcomePage() {
         <div className="container mx-auto my-10 px-5">
           <div className="bg-white shadow-md rounded-lg p-6 space-y-6">
             <div className="flex justify-between items-center">
-              <Link href="/welcome">
+              <Link href="/laos/exchange">
                 <button className="text-sm text-blue-600 hover:underline">← กลับ</button>
               </Link>
               <h2 className="text-xl font-semibold text-gray-700">WECHAT</h2>
@@ -215,7 +214,7 @@ function WelcomePage() {
                   type="number"
                   step="0.01"
                   min="0"
-                  value={postData.find(p => p.title === "CNY" && p.content === "100-50")?.buy || ""}
+                  value={postData.find(p => p.title === "CNY" && p.content === "100-50")?.buylaos || ""}
                   onChange={(e) => {
                     const raw = e.target.value;
                     const value = raw.replace(/[^0-9.]/g, "");
@@ -256,13 +255,13 @@ function WelcomePage() {
             </div>
 
             <div>
-              <label className="block font-medium">รวม (THB):</label>
+              <label className="block font-medium">รวม (LAK):</label>
               <input
                 type="text"
                 readOnly
                 value={
-                  totalTHB
-                    ? parseFloat(totalTHB).toLocaleString("th-TH", {
+                  totalLAK
+                    ? parseFloat(totalLAK).toLocaleString("th-TH", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })

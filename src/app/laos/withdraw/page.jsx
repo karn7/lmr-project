@@ -11,21 +11,26 @@ import Footer from "../components/Footer";
 
 const calculateFee = (amount, currency, smallNoteCount = 0) => {
   const amt = parseFloat(amount || "0");
-  const min = currency === "LAK" ? 10000 : 15000;
   let fee = 0;
-  if (amt <= 10000000) fee = min;
-  else if (amt <= 15000000) fee = 15000;
-  else if (amt <= 20000000) fee = 20000;
-  else if (amt <= 25000000) fee = 25000;
-  else if (amt <= 35000000) fee = 35000;
-  else if (amt <= 45000000) fee = 45000;
-  else if (amt <= 55000000) fee = 55000;
-  else if (amt <= 65000000) fee = 65000;
-  else if (amt <= 75000000) fee = 75000;
-  else if (amt <= 85000000) fee = 85000;
-  else if (amt <= 95000000) fee = 95000;
-  else if (amt <= 100000000) fee = 105000;
-  else fee = Math.ceil(amt * 0.00115);
+
+  if (currency === "CNY") {
+    fee = amt * 0.1; // คิด 10% ถ้าเป็น CNY
+  } else {
+    const min = currency === "LAK" ? 10000 : 15000;
+    if (amt <= 10000000) fee = min;
+    else if (amt <= 15000000) fee = 15000;
+    else if (amt <= 20000000) fee = 20000;
+    else if (amt <= 25000000) fee = 25000;
+    else if (amt <= 35000000) fee = 35000;
+    else if (amt <= 45000000) fee = 45000;
+    else if (amt <= 55000000) fee = 55000;
+    else if (amt <= 65000000) fee = 65000;
+    else if (amt <= 75000000) fee = 75000;
+    else if (amt <= 85000000) fee = 85000;
+    else if (amt <= 95000000) fee = 95000;
+    else if (amt <= 100000000) fee = 105000;
+    else fee = Math.ceil(amt * 0.00115);
+  }
 
   const extra = Math.ceil(parseInt(smallNoteCount || "0", 10) / 30) * 5000;
   return fee + extra;
@@ -121,6 +126,10 @@ function WithdrawPage() {
   }, [session?.user?.name]);
 
   const handleSaveRecord = async () => {
+    if (!navigator.onLine) {
+      alert("ไม่สามารถบันทึกได้ เนื่องจากไม่ได้เชื่อมต่ออินเทอร์เน็ต");
+      return;
+    }
     setIsSaving(true);
     try {
       const payType = transactionType === "deposit" ? "deposit" : "withdraw";
@@ -134,7 +143,7 @@ function WithdrawPage() {
           total: parseFloat(amount || "0"),
         },
         {
-          currency: "LAK",
+          currency: currency === "CNY" ? "CNY" : "LAK",
           unit: "Fee",
           rate: "",
           amount: "",
@@ -204,7 +213,7 @@ function WithdrawPage() {
           },
           body: JSON.stringify({
             ...updateCashBase,
-            currency: "LAK",
+            currency: currency === "CNY" ? "CNY" : "LAK",
             amount: parseFloat(fee || "0"),
             action: "increase",
           }),
@@ -231,7 +240,7 @@ function WithdrawPage() {
           },
           body: JSON.stringify({
             ...updateCashBase,
-            currency: "LAK",
+            currency: currency === "CNY" ? "CNY" : "LAK",
             amount: parseFloat(fee || "0"),
             action: "increase",
           }),
@@ -261,30 +270,30 @@ function WithdrawPage() {
           <div className="bg-white shadow-md rounded-lg p-6 space-y-6">
             <div className="flex justify-between items-center">
               <Link href="/laos/exchange">
-                <button className="text-sm text-blue-600 hover:underline">← กลับ</button>
+                <button className="text-sm text-blue-600 hover:underline" disabled={isSaving}>← กลับ</button>
               </Link>
               <h2 className="text-xl font-semibold text-gray-700">ฝาก-ถอน</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
               <div>
                 <label className="block font-medium">เลขที่:</label>
-                <input type="text" value={docNumber || "รอการสร้าง..."} readOnly className="w-full border px-2 py-1 bg-gray-100" />
+                <input type="text" value={docNumber || "รอการสร้าง..."} readOnly className="w-full border px-2 py-1 bg-gray-100" disabled={isSaving} />
               </div>
               <div>
                 <label className="block font-medium">วันที่:</label>
-                <input type="text" value={new Date().toLocaleDateString("th-TH")} readOnly className="w-full border px-2 py-1 bg-gray-100" />
+                <input type="text" value={new Date().toLocaleDateString("th-TH")} readOnly className="w-full border px-2 py-1 bg-gray-100" disabled={isSaving} />
               </div>
               <div>
                 <label className="block font-medium">พนักงาน:</label>
-                <input type="text" value={session?.user?.name || ""} readOnly className="w-full border px-2 py-1 bg-gray-100" />
+                <input type="text" value={session?.user?.name || ""} readOnly className="w-full border px-2 py-1 bg-gray-100" disabled={isSaving} />
               </div>
               <div>
                 <label className="block font-medium">ชื่อลูกค้า:</label>
-                <input type="text" className="w-full border px-2 py-1" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+                <input type="text" className="w-full border px-2 py-1" value={customerName} onChange={(e) => setCustomerName(e.target.value)} disabled={isSaving} />
               </div>
               <div>
                 <label className="block font-medium">สาขา:</label>
-                <input type="text" className="w-full border px-2 py-1 bg-gray-100" value={session?.user?.branch || ""} readOnly />
+                <input type="text" className="w-full border px-2 py-1 bg-gray-100" value={session?.user?.branch || ""} readOnly disabled={isSaving} />
               </div>
             </div>
 
@@ -299,6 +308,7 @@ function WithdrawPage() {
                     checked={transactionType === "deposit"}
                     onChange={() => setTransactionType("deposit")}
                     className="form-radio"
+                    disabled={isSaving}
                   />
                   <span className="ml-1">ฝากเงิน</span>
                 </label>
@@ -310,6 +320,7 @@ function WithdrawPage() {
                     checked={transactionType === "withdraw"}
                     onChange={() => setTransactionType("withdraw")}
                     className="form-radio"
+                    disabled={isSaving}
                   />
                   <span className="ml-1">ถอนเงิน</span>
                 </label>
@@ -324,6 +335,7 @@ function WithdrawPage() {
                     checked={channel === "NOUKKY"}
                     onChange={() => setChannel("NOUKKY")}
                     className="form-radio"
+                    disabled={isSaving}
                   />
                   <span className="ml-1">NOUKKY</span>
                 </label>
@@ -335,6 +347,7 @@ function WithdrawPage() {
                     checked={channel === "BECOME"}
                     onChange={() => setChannel("BECOME")}
                     className="form-radio"
+                    disabled={isSaving}
                   />
                   <span className="ml-1">BECOME</span>
                 </label>
@@ -354,6 +367,7 @@ function WithdrawPage() {
                       checked={currency === "THB"}
                       onChange={() => setCurrency("THB")}
                       className="form-radio"
+                      disabled={isSaving}
                     />
                     <span className="ml-1">THB</span>
                   </label>
@@ -365,6 +379,7 @@ function WithdrawPage() {
                       checked={currency === "LAK"}
                       onChange={() => setCurrency("LAK")}
                       className="form-radio"
+                      disabled={isSaving}
                     />
                     <span className="ml-1">LAK</span>
                   </label>
@@ -376,8 +391,21 @@ function WithdrawPage() {
                       checked={currency === "USD"}
                       onChange={() => setCurrency("USD")}
                       className="form-radio"
+                      disabled={isSaving}
                     />
                     <span className="ml-1">USD</span>
+                  </label>
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      name="currency"
+                      value="CNY"
+                      checked={currency === "CNY"}
+                      onChange={() => setCurrency("CNY")}
+                      className="form-radio"
+                      disabled={isSaving}
+                    />
+                    <span className="ml-1">CNY</span>
                   </label>
                 </div>
               </div>
@@ -405,18 +433,22 @@ function WithdrawPage() {
                   }}
                   className="border px-2 py-1 w-full sm:w-40"
                   placeholder="0.00"
+                  disabled={isSaving}
                 />
               </div>
 
               <div className="flex flex-row space-x-4">
                 <div className="border rounded p-3 flex flex-col">
-                  <label className="font-medium">ค่าธรรมเนียม (กีบ):</label>
+                  <label className="font-medium">
+                    ค่าธรรมเนียม ({currency === "CNY" ? "หยวน" : "กีบ"}):
+                  </label>
                   <input
                     type="text"
                     value={fee ? Number(fee).toLocaleString("th-TH") : ""}
                     readOnly
                     className="border px-2 py-1 w-full sm:w-24 bg-gray-100 text-gray-600"
                     placeholder="0"
+                    disabled={isSaving}
                   />
                 </div>
                 {transactionType === "deposit" && (currency === "THB" || currency === "USD") && (
@@ -431,6 +463,7 @@ function WithdrawPage() {
                       }}
                       className="border px-2 py-1 w-full sm:w-24"
                       placeholder="0"
+                      disabled={isSaving}
                     />
                   </div>
                 )}
@@ -441,7 +474,7 @@ function WithdrawPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="col-span-full">
                 <label className="block font-medium">หมายเหตุทั่วไป:</label>
-                <textarea className="w-full border px-2 py-1" value={note} onChange={(e) => setNote(e.target.value)}></textarea>
+                <textarea className="w-full border px-2 py-1" value={note} onChange={(e) => setNote(e.target.value)} disabled={isSaving}></textarea>
               </div>
             </div>
 

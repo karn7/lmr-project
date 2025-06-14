@@ -9,54 +9,27 @@ export async function POST(req) {
     await connectMongoDB();
 
     const {
-      items,
-      employee,
       employeeCode,
-      shiftNo, 
-      branch,
-      customerName,
-      payType,
-      payMethod,
-      payMethodNote,
-      receiveMethod,
-      receiveMethodNote,
-      total,
-      note
+      ...recordData
     } = await req.json();
     
     console.log("📥 Incoming record data:", {
-      items,
-      employee,
-      employeeCode,
-      shiftNo, 
-      branch,
-      customerName,
-      payType,
-      payMethod,
-      payMethodNote,
-      receiveMethod,
-      receiveMethodNote,
-      total,
-      note
+      ...recordData,
+      employeeCode
     });
 
-    const prefix = payType === "Selling" ? "S" : payType === "Buying" ? "B" : "A";
-    const docNumber = await generateDocNumber(prefix, employee, employeeCode);
+    const prefix = recordData.payType === "Selling" ? "S" : recordData.payType === "Buying" ? "B" : "A";
+    const docNumber = await generateDocNumber(prefix, recordData.employee, employeeCode);
+
+    console.log("🧾 Final data to save (without employeeCode):", {
+      ...recordData,
+      docNumber,
+      createdAt: new Date()
+    });
 
     const newRecord = new Record({
+      ...recordData,
       docNumber,
-      shiftNo, 
-      items,
-      employee,
-      branch,
-      customerName,
-      payType,
-      payMethod,
-      payMethodNote,
-      receiveMethod,
-      receiveMethodNote,
-      total,
-      note,
       createdAt: new Date()
     });
 

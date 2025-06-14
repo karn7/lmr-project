@@ -1,19 +1,22 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import UserSideNav from "../components/userSideNav";
 import Link from "next/link";
 import Image from "next/image";
-import Container from "../components/Container";
 import { useSession, signOut } from "next-auth/react";
 import { redirect } from "next/navigation";
+import Container from "../components/Container";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 
 function WelcomePage() {
   const { data: session } = useSession();
 
   const [currentShift, setCurrentShift] = useState({});
+  const [usdReceiveMethod, setUsdReceiveMethod] = useState("usd");
+
+  const [exchangeRates, setExchangeRates] = useState({ USD: 0 });
+  const [usdFee, setUsdFee] = useState(0);
 
   useEffect(() => {
     if (!session) {
@@ -39,6 +42,41 @@ function WelcomePage() {
     }
   }, [session]);
 
+  useEffect(() => {
+    const fetchRates = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/posts`);
+        const data = await res.json();
+        const rates = { USD: 0, THB: 0 };
+        data.posts.forEach(post => {
+          if (post.title === "USD") rates.USD = parseFloat(post.selllaos || 0);
+          if (post.title === "THB") rates.THB = parseFloat(post.selllaos || 0);
+        });
+        setExchangeRates(rates);
+      } catch (err) {
+        console.error("Error fetching exchange rates", err);
+      }
+    };
+    fetchRates();
+  }, []);
+
+  const calculateFee = (converted) => {
+    const amt = parseFloat(converted || 0);
+    if (amt <= 10000000) return 15000;
+    else if (amt <= 15000000) return 15000;
+    else if (amt <= 20000000) return 20000;
+    else if (amt <= 25000000) return 25000;
+    else if (amt <= 35000000) return 35000;
+    else if (amt <= 45000000) return 45000;
+    else if (amt <= 55000000) return 55000;
+    else if (amt <= 65000000) return 65000;
+    else if (amt <= 75000000) return 75000;
+    else if (amt <= 85000000) return 85000;
+    else if (amt <= 95000000) return 95000;
+    else if (amt <= 100000000) return 105000;
+    else return Math.ceil(amt * 0.00115);
+  };
+
   const [postData, setPostData] = useState([]);
   const [records, setRecords] = useState([]);
 
@@ -46,8 +84,29 @@ function WelcomePage() {
 
   const [customerName, setCustomerName] = useState("");
   const [exchangeAmount, setExchangeAmount] = useState("");
-  const [totalTHB, setTotalTHB] = useState("");
+  const [totalLAK, setTotalLAK] = useState("");
   const [note, setNote] = useState("");
+  const [rate, setRate] = useState("");
+  // คำนวณค่า totalLAK อัตโนมัติเมื่อ exchangeAmount, rate, หรือ usdReceiveMethod เปลี่ยนแปลง
+  useEffect(() => {
+    if (usdReceiveMethod === "lak" && exchangeAmount && rate) {
+      const total = parseFloat(exchangeAmount) * parseFloat(rate);
+      setTotalLAK(total.toFixed(2));
+    } else {
+      setTotalLAK("");
+    }
+  }, [exchangeAmount, rate, usdReceiveMethod]);
+
+  useEffect(() => {
+    if (usdReceiveMethod === "usd" && exchangeAmount && exchangeRates.USD) {
+      const usd = parseFloat(exchangeAmount || "0");
+      const converted = usd * exchangeRates.USD;
+      const fee = calculateFee(converted);
+      setUsdFee(fee);
+    } else {
+      setUsdFee(0);
+    }
+  }, [exchangeAmount, usdReceiveMethod, exchangeRates]);
 
   const [isSaving, setIsSaving] = useState(false);
   const [docNumber, setDocNumber] = useState("");
@@ -88,17 +147,6 @@ function WelcomePage() {
     fetchShift();
   }, [session?.user?.name]);
 
-  useEffect(() => {
-    const matchedPost = postData.find(p => p.title === "CNY" && p.content === "100-50");
-    const rate = parseFloat(matchedPost?.buy || "0");
-    const amount = parseFloat(exchangeAmount);
-    if (!isNaN(rate) && !isNaN(amount)) {
-      setTotalTHB((rate * amount).toFixed(2));
-    } else {
-      setTotalTHB("");
-    }
-  }, [postData, exchangeAmount]);
-
   const handleSaveRecord = async () => {
     if (!navigator.onLine) {
       alert("ไม่สามารถบันทึกข้อมูลได้ เนื่องจากไม่มีการเชื่อมต่ออินเทอร์เน็ต");
@@ -113,23 +161,33 @@ function WelcomePage() {
         body: JSON.stringify({
           items: [
             {
-              currency: "CNY",
-              rate: parseFloat(postData.find(p => p.title === "CNY" && p.content === "100-50")?.buy || "0"),
+              currency: "USD",
+              rate: parseFloat(rate),
               amount: parseFloat(exchangeAmount),
-              total: parseFloat(totalTHB)
-            }
+              total: usdReceiveMethod === "usd" ? parseFloat(totalLAK) : parseFloat(totalLAK)
+            },
+            ...(usdReceiveMethod === "usd"
+              ? [
+                  {
+                    currency: "LAK-Fee",
+                    rate: 1,
+                    amount: usdFee,
+                    total: usdFee
+                  }
+                ]
+              : [])
           ],
           employee: session?.user?.name,
           employeeCode: session?.user?.employeeCode || "",
           branch: session?.user?.branch,
           shiftNo: currentShift?.shiftNo || "",
           customerName,
-          payType: "Wechat",
-          payMethod: "wechat",
+          payType: "MoneyGram",
+          payMethod: "",
           payMethodNote: "",
-          receiveMethod: "เงินสด",
+          receiveMethod: "",
           receiveMethodNote: "",
-          total: parseFloat(totalTHB),
+          total: parseFloat(totalLAK),
           note
         })
       });
@@ -138,21 +196,22 @@ function WelcomePage() {
       if (res.ok) {
         setDocNumber(data.docNumber);
 
-        const payloadTHB = {
+        const isUsdTransfer = usdReceiveMethod === "usd";
+        const payloadLAK = {
           docNumber: data.docNumber,
           employee: session?.user?.name || "",
           shiftNo: currentShift?.shiftNo || "",
-          totalTHB: parseFloat(totalTHB),
-          action: "decrease",
+          totalLAK: isUsdTransfer ? usdFee : parseFloat(totalLAK),
+          action: isUsdTransfer ? "increase" : "decrease",
         };
-        console.log("📤 ส่งข้อมูล update-cash สำหรับ THB:", payloadTHB);
+        console.log("📤 ส่งข้อมูล update-cash สำหรับ LAK:", payloadLAK);
         await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/update-cash`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payloadTHB),
+          body: JSON.stringify(payloadLAK),
         });
 
-        const total = parseFloat(totalTHB).toFixed(2);
+        const total = parseFloat(totalLAK).toFixed(2);
         window.open(
           `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/printreceipt?docNumber=${data.docNumber}&total=${total}`,
           "_blank",
@@ -176,10 +235,10 @@ function WelcomePage() {
         <div className="container mx-auto my-10 px-5">
           <div className="bg-white shadow-md rounded-lg p-6 space-y-6">
             <div className="flex justify-between items-center">
-              <Link href="/welcome">
+              <Link href="/laos/exchange">
                 <button className="text-sm text-blue-600 hover:underline">← กลับ</button>
               </Link>
-              <h2 className="text-xl font-semibold text-gray-700">WECHAT</h2>
+              <h2 className="text-xl font-semibold text-gray-700">MoneyGram</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
               <div>
@@ -204,73 +263,104 @@ function WelcomePage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-              <div>
-                <label className="block font-medium">สกุลเงิน:</label>
-                <input type="text" value="CNY" readOnly className="w-full border px-2 py-1 bg-gray-100" />
-              </div>
-              <div>
-                <label className="block font-medium">เรท:</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={postData.find(p => p.title === "CNY" && p.content === "100-50")?.buy || ""}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    const value = raw.replace(/[^0-9.]/g, "");
-                    // Allow only one dot
-                    const parts = value.split(".");
-                    const sanitized = parts.length > 2 ? parts[0] + "." + parts.slice(1).join("") : value;
+            <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
+  <div className="grid grid-cols-1 sm:grid-cols-1">
+    <div>
+      <label className="block font-medium">สกุลเงิน:</label>
+      <input type="text" value="USD" readOnly className="w-full border px-2 py-1 bg-gray-100" />
+      <label className="block font-medium mt-2">จำนวน (USD):</label>
+      <input
+        type="number"
+        step="0.01"
+        min="0"
+        value={exchangeAmount}
+        onChange={(e) => {
+          const raw = e.target.value;
+          const value = raw.replace(/[^0-9.]/g, "");
+          const parts = value.split(".");
+          const sanitized = parts.length > 2 ? parts[0] + "." + parts.slice(1).join("") : value;
+          setExchangeAmount(sanitized);
+        }}
+        className="w-full border px-2 py-1"
+      />
+      <div className="mt-2 flex gap-4">
+        <label className="inline-flex items-center">
+          <input
+            type="radio"
+            name="usdReceiveMethod"
+            value="usd"
+            checked={usdReceiveMethod === "usd"}
+            onChange={(e) => setUsdReceiveMethod(e.target.value)}
+            className="form-radio text-blue-600"
+          />
+          <span className="ml-2">รับโอนดอลล่า</span>
+        </label>
+        <label className="inline-flex items-center">
+          <input
+            type="radio"
+            name="usdReceiveMethod"
+            value="lak"
+            checked={usdReceiveMethod === "lak"}
+            onChange={(e) => setUsdReceiveMethod(e.target.value)}
+            className="form-radio text-blue-600"
+          />
+          <span className="ml-2">รับกีบสด</span>
+        </label>
+      </div>
+      {usdReceiveMethod === "usd" && (
+        <div className="mt-4">
+          <label className="block font-medium">ค่าธรรมเนียม (LAK):</label>
+          <input
+            type="text"
+            readOnly
+            className="w-full border px-2 py-1 bg-gray-100"
+            value={usdFee ? usdFee.toLocaleString("th-TH") : ""}
+          />
+        </div>
+      )}
+    </div>
+  </div>
+  {usdReceiveMethod === "lak" && (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label className="block font-medium">เรท:</label>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          value={rate}
+          onChange={(e) => {
+            const raw = e.target.value;
+            const value = raw.replace(/[^0-9.]/g, "");
+            const parts = value.split(".");
+            const sanitized = parts.length > 2 ? parts[0] + "." + parts.slice(1).join("") : value;
+            setRate(sanitized);
+          }}
+          className="w-full border px-2 py-1"
+        />
+      </div>
+    </div>
+  )}
 
-                    setPostData((prev) => {
-                      const updated = [...prev];
-                      const index = updated.findIndex(p => p.title === "CNY" && p.content === "100-50");
-                      if (index !== -1) {
-                        updated[index] = { ...updated[index], buy: sanitized };
-                      }
-                      return updated;
-                    });
-                  }}
-                  className="w-full border px-2 py-1"
-                />
-              </div>
-              <div>
-                <label className="block font-medium">จำนวนที่แลก:</label>
-                <input
-                  type="text"
-                  className="w-full border px-2 py-1 text-right"
-                  value={
-                    exchangeAmount
-                      ? parseFloat(exchangeAmount).toLocaleString("th-TH")
-                      : ""
-                  }
-                  onChange={(e) => {
-                    const raw = e.target.value.replace(/,/g, "");
-                    if (/^\d*$/.test(raw)) {
-                      setExchangeAmount(raw);
-                    }
-                  }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block font-medium">รวม (THB):</label>
-              <input
-                type="text"
-                readOnly
-                value={
-                  totalTHB
-                    ? parseFloat(totalTHB).toLocaleString("th-TH", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })
-                    : ""
-                }
-                className="w-full border px-2 py-2 text-2xl bg-black text-green-400 font-bold text-right"
-              />
-            </div>
+  {usdReceiveMethod === "lak" && (
+    <div>
+      <label className="block font-medium">รวม (LAK):</label>
+      <input
+        type="text"
+        readOnly
+        value={
+          totalLAK
+            ? parseFloat(totalLAK).toLocaleString("th-TH", {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+              })
+            : ""
+        }
+        className="w-full border px-2 py-2 text-2xl bg-black text-green-400 font-bold text-right"
+      />
+    </div>
+  )}
+</div>
 
             {/* Extra fields for note */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

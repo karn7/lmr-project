@@ -6,8 +6,8 @@ export async function POST(req) {
   try {
     await connectMongoDB();
 
-    const { docNumber, totalTHB, currency, amount, action, shiftNo, employee } = await req.json();
-    console.log("📥 รับข้อมูล:", { docNumber, totalTHB, currency, amount, action, shiftNo, employee });
+    const { docNumber, totalTHB, totalLAK, currency, amount, action, shiftNo, employee } = await req.json();
+    console.log("📥 รับข้อมูล:", { docNumber, totalTHB, totalLAK, currency, amount, action, shiftNo, employee });
 
     const today = new Date().toISOString().slice(0, 10); // yyyy-mm-dd
 
@@ -34,6 +34,10 @@ export async function POST(req) {
     const sign = action === "increase" ? 1 : -1;
     if (totalTHB !== undefined) {
       updated.THB = (parseFloat(updated.THB) || 0) + sign * parseFloat(totalTHB);
+    }
+
+    if (totalLAK !== undefined) {
+      updated.LAK = (parseFloat(updated.LAK) || 0) + sign * parseFloat(totalLAK);
     }
 
     if (currency && amount !== undefined) {

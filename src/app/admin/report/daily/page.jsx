@@ -224,7 +224,7 @@ function ReportPage() {
                       <td className="p-2 border">{r.payType}</td>
                       <td className="p-2 border">{r.payMethod}</td>
                       <td className="p-2 border">{r.receiveMethod}</td>
-                      <td className="p-2 border">{r.total.toLocaleString()}</td>
+                      <td className="p-2 border">{r.total != null ? Number(r.total).toLocaleString() : "-"}</td>
                       <td className="p-2 border">{r.branch}</td>
                       <td className="p-2 border">{r.employee}</td>
                       <td className="p-2 border">

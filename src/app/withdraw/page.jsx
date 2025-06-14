@@ -68,6 +68,10 @@ function WithdrawPage() {
   }, [session?.user?.name]);
 
   const handleSaveRecord = async () => {
+    if (!navigator.onLine) {
+      alert("ไม่มีการเชื่อมต่ออินเทอร์เน็ต กรุณาเชื่อมต่อก่อนบันทึก");
+      return;
+    }
     setIsSaving(true);
     try {
       const payType = transactionType === "deposit" ? "deposit" : "withdraw";
@@ -380,7 +384,11 @@ function WithdrawPage() {
               </div>
             </div>
 
-            <button onClick={handleSaveRecord} disabled={isSaving} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+            <button
+              onClick={handleSaveRecord}
+              disabled={isSaving}
+              className={`px-4 py-2 rounded text-white ${isSaving ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
+            >
               {isSaving ? "กำลังบันทึก..." : "บันทึกรายการ"}
             </button>
           </div>

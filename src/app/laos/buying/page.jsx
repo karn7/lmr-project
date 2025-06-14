@@ -26,6 +26,7 @@ function ExchangePage() {
   const [docNumber, setDocNumber] = useState("");
   const [note, setNote] = useState("");
   const [currentShift, setCurrentShift] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const router = useRouter();
 
@@ -123,8 +124,13 @@ function ExchangePage() {
   }, [selectedCurrency]);
 
   const handleSave = async () => {
+    if (!navigator.onLine) {
+      alert("ไม่สามารถบันทึกได้ เนื่องจากไม่มีการเชื่อมต่ออินเทอร์เน็ต");
+      return;
+    }
     const confirmSave = confirm("คุณต้องการบันทึกรายการหรือไม่?");
     if (!confirmSave) return;
+    setIsSaving(true);
     try {
       // Force payMethod and receiveMethod to "cash"
       const payMethodFixed = "cash";
@@ -156,12 +162,12 @@ function ExchangePage() {
         const { docNumber } = await res.json();
 
         if (receiveMethod !== "transfer") {
-          // ส่งยอดรวม THB เป็น decrease ก่อน
+          // ส่งยอดรวม LAK เป็น decrease ก่อน
           const payloadTHB = {
             docNumber,
             employee: session?.user?.name || "",
             shiftNo: currentShift?.shiftNo,
-            totalTHB: totalSum,
+            totalLAK: totalSum,
             action: "decrease",
           };
           console.log("📤 ส่งข้อมูล update-cash สำหรับ THB:", payloadTHB);
@@ -202,11 +208,13 @@ function ExchangePage() {
       }
     } catch (error) {
       console.error("Error saving record:", error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
-    <div className="bg-orange-500 min-h-screen p-4 text-black">
+    <div className={`bg-orange-500 min-h-screen p-4 text-black ${isSaving ? 'pointer-events-none opacity-50' : ''}`}>
       <div className="flex justify-between items-start">
         <Link
           href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/laos/exchange`}
@@ -297,11 +305,13 @@ function ExchangePage() {
         </div>
         <div className="text-right bg-black text-green-400 px-6 py-4 text-4xl font-bold rounded shadow h-fit">
           ยอดรวม:{" "}
-          {totalSum.toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}{" "}
-          <span className="text-sm">THB</span>
+          {Number.isInteger(totalSum)
+            ? totalSum.toLocaleString()
+            : totalSum.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}{" "}
+          <span className="text-sm">LAK</span>
         </div>
       </div>
 
@@ -453,10 +463,14 @@ function ExchangePage() {
             />
           </div>
 
+          {isSaving && (
+            <div className="text-white font-bold mb-2">กำลังบันทึกข้อมูล...</div>
+          )}
           <div className="flex justify-end">
             <button
               onClick={handleSave}
               className="bg-green-600 text-white py-2 px-6 rounded text-lg"
+              disabled={isSaving}
             >
               บันทึกรายการ
             </button>

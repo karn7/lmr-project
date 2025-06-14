@@ -127,6 +127,10 @@ function LotteryPage() {
   const totalSum = lotteryItems.reduce((sum, item) => sum + item.total, 0);
 
   const handleSaveRecord = async () => {
+    if (!navigator.onLine) {
+      alert("ไม่สามารถบันทึกข้อมูลได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต");
+      return;
+    }
     if (isSaving) return;
     setIsSaving(true);
 
@@ -341,7 +345,7 @@ function LotteryPage() {
             </div>
 
             <button onClick={handleSaveRecord} disabled={isSaving} className={`bg-blue-600 text-white px-4 py-2 rounded ${isSaving ? "cursor-not-allowed opacity-50" : ""}`}>
-              บันทึกรายการ
+              {isSaving ? "กำลังบันทึกข้อมูล..." : "บันทึกรายการ"}
             </button>
           </div>
         </div>
