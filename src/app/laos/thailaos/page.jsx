@@ -11,14 +11,21 @@ import Footer from "../components/Footer";
 
 function WelcomePage() {
 
-    const [amountTHB, setAmountTHB] = useState("");
+  const [buyRate, setBuyRate] = useState(0);
+
+  const [amountTHB, setAmountTHB] = useState("");
   const [feeTHB, setFeeTHB] = useState(0);
   const [feeMain, setFeeMain] = useState(0);
-  const [deductTHB, setDeductTHB] = useState(0);
-  const [payTHB, setPayTHB] = useState(0);
-  const [payLAK, setPayLAK] = useState(0);
   const [rateTHB, setRateTHB] = useState(0);
-  const [autoCalcTHB, setAutoCalcTHB] = useState(true);
+  const [deductAmount, setDeductAmount] = useState(0);
+  const [totalAfterDeduct, setTotalAfterDeduct] = useState(0);
+  const [direction, setDirection] = useState("THAI-LAOS");
+  // Add state for paidTHB and receivedTHB
+  const [paidTHB, setPaidTHB] = useState("");
+  const [receivedTHB, setReceivedTHB] = useState("");
+  const [feePaidTHB, setFeePaidTHB] = useState("");
+  const [feePaidLAK, setFeePaidLAK] = useState("");
+  const [transferLAK, setTransferLAK] = useState("");
 
   useEffect(() => {
     const amt = parseFloat((amountTHB || "0").toString().replace(/,/g, ""));
@@ -91,6 +98,8 @@ function WelcomePage() {
       if (data.posts) {
         const thbPost = data.posts.find(post => post.title === "THB");
         if (thbPost) setRateTHB(parseFloat(thbPost.selllaos || 0));
+        const buyPost = data.posts.find(post => post.title === "THB");
+        if (buyPost) setBuyRate(parseFloat(buyPost.buylaos || 0));
       }
     } catch (error) {
       console.log("Error loading posts: ", error);
@@ -116,6 +125,11 @@ function WelcomePage() {
     fetchShift();
   }, [session?.user?.name]);
 
+  useEffect(() => {
+    const amt = parseFloat((amountTHB || "0").toString().replace(/,/g, ""));
+    setTotalAfterDeduct(amt - deductAmount);
+  }, [amountTHB, deductAmount]);
+
   const handleSaveRecord = async () => {
     if (!navigator.onLine) {
       alert("ไม่สามารถบันทึกข้อมูลได้ เนื่องจากไม่มีการเชื่อมต่ออินเทอร์เน็ต");
@@ -130,10 +144,10 @@ function WelcomePage() {
         body: JSON.stringify({
           items: [
             {
-              currency: "USD",
+              currency: "THB",
               rate: 0,
               amount: 0,
-              total: 0
+              total: parseFloat((amountTHB || "0").toString().replace(/,/g, ""))
             }
           ],
           employee: session?.user?.name,
@@ -141,12 +155,12 @@ function WelcomePage() {
           branch: session?.user?.branch,
           shiftNo: currentShift?.shiftNo || "",
           customerName,
-          payType: "MoneyGram",
+          payType: direction,
           payMethod: "",
           payMethodNote: "",
           receiveMethod: "",
           receiveMethodNote: "",
-          total: 0,
+          total: parseFloat((amountTHB || "0").toString().replace(/,/g, "")),
           note
         })
       });
@@ -154,6 +168,96 @@ function WelcomePage() {
       const data = await res.json();
       if (res.ok) {
         setDocNumber(data.docNumber);
+
+        // 🧾 ส่งข้อมูล update-cash ตามประเภท
+        const feeTHBValue = parseFloat((feePaidTHB || "0").toString().replace(/,/g, ""));
+        const feeLAKValue = parseFloat((feePaidLAK || "0").toString().replace(/,/g, ""));
+        const paidTHBValue = parseFloat((paidTHB || "0").toString().replace(/,/g, ""));
+        const paidLAKValue = direction === "THAI-LAOS"
+          ? Math.round((totalAfterDeduct - paidTHBValue) * buyRate)
+          : Math.round((totalAfterDeduct - parseFloat(receivedTHB || "0")) * rateTHB);
+        const receivedTHBValue = parseFloat((receivedTHB || "0").toString().replace(/,/g, ""));
+
+        // ✅ บวกค่าธรรมเนียม (บาท)
+        await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/update-cash`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            docNumber: data.docNumber,
+            employee: session?.user?.name || "",
+            shiftNo: currentShift?.shiftNo || "",
+            totalTHB: feeTHBValue,
+            action: "increase",
+          }),
+        });
+
+        // ✅ บวกค่าธรรมเนียม (กีบ เป็น THB)
+        await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/update-cash`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            docNumber: data.docNumber,
+            employee: session?.user?.name || "",
+            shiftNo: currentShift?.shiftNo || "",
+            totalLAK: feeLAKValue,
+            action: "increase",
+          }),
+        });
+
+        // ✅ รวมเป็นเงิน (THB / LAK)
+        if (direction === "THAI-LAOS") {
+          // ลบ THB
+          await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/update-cash`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              docNumber: data.docNumber,
+              employee: session?.user?.name || "",
+              shiftNo: currentShift?.shiftNo || "",
+              totalTHB: paidTHBValue,
+              action: "decrease",
+            }),
+          });
+
+          // ลบ LAK
+          await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/update-cash`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              docNumber: data.docNumber,
+              employee: session?.user?.name || "",
+              shiftNo: currentShift?.shiftNo || "",
+              totalLAK: paidLAKValue,
+              action: "decrease",
+            }),
+          });
+        } else {
+          // บวก THB
+          await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/update-cash`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              docNumber: data.docNumber,
+              employee: session?.user?.name || "",
+              shiftNo: currentShift?.shiftNo || "",
+              totalTHB: receivedTHBValue,
+              action: "increase",
+            }),
+          });
+
+          // บวก LAK
+          await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/open-shift/update-cash`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              docNumber: data.docNumber,
+              employee: session?.user?.name || "",
+              shiftNo: currentShift?.shiftNo || "",
+              totalLAK: paidLAKValue,
+              action: "increase",
+            }),
+          });
+        }
 
         window.open(
           `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/printreceipt?docNumber=${data.docNumber}&total=0`,
@@ -170,30 +274,6 @@ function WelcomePage() {
       setIsSaving(false);
     }
   };
-
-  useEffect(() => {
-    const fee = parseFloat(feeTHB || 0);
-    const deduct = parseFloat(deductTHB || 0);
-    const payTHBValue = parseFloat(payTHB || 0);
-    const remain = fee - deduct - payTHBValue;
-
-    // อัพเดทจ่ายบาทสด (THB) = ค่าธรรมเนียม - หักในยอด
-    if (autoCalcTHB) {
-      if (fee - deduct > 0) {
-        setPayTHB((fee - deduct).toFixed(2));
-      } else {
-        setPayTHB(0);
-      }
-    }
-
-    // อัพเดทจ่ายกีบสด (LAK) = (ค่าธรรมเนียม - หักในยอด - จ่ายบาทสด) × เรท
-    if (remain > 0 && rateTHB > 0) {
-      const payLAKValue = remain * rateTHB;
-      setPayLAK(payLAKValue);
-    } else {
-      setPayLAK(0);
-    }
-  }, [feeTHB, deductTHB, payTHB, rateTHB, autoCalcTHB]);
 
   return (
     <Container>
@@ -235,11 +315,11 @@ function WelcomePage() {
               <label className="block font-medium mb-2 text-lg">เลือกประเภท:</label>
               <div className="flex gap-6 text-lg">
                 <label className="flex items-center space-x-2">
-                  <input type="radio" name="direction" value="THAI-LAOS" defaultChecked />
+                  <input type="radio" name="direction" value="THAI-LAOS" checked={direction === "THAI-LAOS"} onChange={(e) => setDirection(e.target.value)} />
                   <span>THAI-LAOS</span>
                 </label>
                 <label className="flex items-center space-x-2">
-                  <input type="radio" name="direction" value="LAOS-THAI" />
+                  <input type="radio" name="direction" value="LAOS-THAI" checked={direction === "LAOS-THAI"} onChange={(e) => setDirection(e.target.value)} />
                   <span>LAOS-THAI</span>
                 </label>
               </div>
@@ -265,52 +345,74 @@ function WelcomePage() {
                 />
               </div>
               <div>
-                <p className="text-red-600 font-semibold mt-6">ค่าธรรมเนียม: {feeTHB.toLocaleString()} บาท</p>
+                <p className="text-red-600 font-semibold mt-6">
+                  ค่าธรรมเนียม: {feeTHB.toLocaleString()} บาท 
+                  หรือ {(feeTHB * rateTHB).toLocaleString()} กีบ
+                </p>
               </div>
             </div>
-            <div className="col-span-full mt-4">
+
+
+            {/* Removed ค่าธรรมเนียม inputs and related controls as per instructions */}
+            <div className="col-span-full mt-4 border border-gray-300 p-4 rounded-md">
               <label className="block font-medium text-lg mb-2">ค่าธรรมเนียม</label>
-              <div className="border border-gray-300 p-4 rounded-md">
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                  <div>
-                    {/* Removed ค่าธรรมเนียมหลัก (THB) input as per instructions */}
-                  </div>
-                  <div>
-                    <label className="block font-medium">หักในยอด (THB):</label>
-                    <input
-                      type="number"
-                      className="w-full border px-2 py-1"
-                      value={deductTHB}
-                      onChange={(e) => setDeductTHB(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-1">
-                      <input
-                        type="checkbox"
-                        checked={autoCalcTHB}
-                        onChange={(e) => setAutoCalcTHB(e.target.checked)}
-                        className="mr-1"
-                      />
-                      คำนวณอัตโนมัติ
-                    </label>
-                    <label className="block font-medium">จ่ายบาทสด (THB):</label>
-                    <input
-                      type="number"
-                      className="w-full border px-2 py-1"
-                      value={payTHB}
-                      onChange={(e) => setPayTHB(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-medium">จ่ายกีบสด (LAK):</label>
-                    <input
-                      type="number"
-                      className="w-full border px-2 py-1 bg-gray-100"
-                      value={payLAK.toLocaleString()}
-                      readOnly
-                    />
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div>
+                  <label className="block font-medium">หักในยอด:</label>
+                  <input
+                    type="number"
+                    className="w-full border px-2 py-1"
+                    value={deductAmount}
+                    onChange={(e) => setDeductAmount(parseFloat(e.target.value || 0))}
+                  />
+                </div>
+                <div>
+                  <label className="block font-medium">บาท(สด):</label>
+                  <input
+                    type="text"
+                    className="w-full border px-2 py-1"
+                    value={feePaidTHB}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/,/g, "");
+                      if (!isNaN(raw)) {
+                        const num = parseFloat(raw);
+                        if (!isNaN(num)) setFeePaidTHB(num.toLocaleString());
+                        else setFeePaidTHB("");
+                      }
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="block font-medium">กีบ(สด):</label>
+                  <input
+                    type="text"
+                    className="w-full border px-2 py-1"
+                    value={feePaidLAK}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/,/g, "");
+                      if (!isNaN(raw)) {
+                        const num = parseFloat(raw);
+                        if (!isNaN(num)) setFeePaidLAK(num.toLocaleString());
+                        else setFeePaidLAK("");
+                      }
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="block font-medium">โอนกีบ:</label>
+                  <input
+                    type="text"
+                    className="w-full border px-2 py-1"
+                    value={transferLAK}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/,/g, "");
+                      if (!isNaN(raw)) {
+                        const num = parseFloat(raw);
+                        if (!isNaN(num)) setTransferLAK(num.toLocaleString());
+                        else setTransferLAK("");
+                      }
+                    }}
+                  />
                 </div>
               </div>
             </div>
@@ -320,16 +422,64 @@ function WelcomePage() {
               <div className="border border-gray-300 p-4 rounded-md grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block font-medium">รวมเป็นเงิน (THB):</label>
-                  <input type="number" className="w-full border px-2 py-1 bg-black text-green-500" />
+                  <input
+                    type="number"
+                    className="w-full border px-2 py-1 bg-black text-green-500"
+                    value={totalAfterDeduct}
+                    readOnly
+                  />
                 </div>
-                <div>
-                  <label className="block font-medium">จ่ายบาท (THB):</label>
-                  <input type="number" className="w-full border px-2 py-1 bg-black text-green-500" />
-                </div>
-                <div>
-                  <label className="block font-medium">จ่ายกีบ (LAK):</label>
-                  <input type="number" className="w-full border px-2 py-1 bg-black text-green-500" />
-                </div>
+                {direction === "LAOS-THAI" ? (
+                  <>
+                    <div>
+                      <label className="block font-medium">รับบาท (THB):</label>
+                      <input
+                        type="number"
+                        className="w-full border px-2 py-1 bg-black text-green-500"
+                        value={receivedTHB}
+                        onChange={(e) => setReceivedTHB(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-medium">รับกีบ (LAK):</label>
+                      <input
+                        type="number"
+                        className="w-full border px-2 py-1 bg-black text-green-500"
+                        value={
+                          direction === "LAOS-THAI"
+                            ? Math.round((totalAfterDeduct - parseFloat(receivedTHB || 0)) * rateTHB)
+                            : ""
+                        }
+                        readOnly
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block font-medium">จ่ายบาท (THB):</label>
+                      <input
+                        type="number"
+                        className="w-full border px-2 py-1 bg-black text-green-500"
+                        value={paidTHB}
+                        onChange={(e) => setPaidTHB(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-medium">จ่ายกีบ (LAK):</label>
+                      <input
+                        type="number"
+                        className="w-full border px-2 py-1 bg-black text-green-500"
+                        value={
+                          direction === "THAI-LAOS"
+                            ? Math.round((totalAfterDeduct - parseFloat(paidTHB || 0)) * buyRate)
+                            : Math.round((totalAfterDeduct - parseFloat(receivedTHB || 0)) * rateTHB)
+                        }
+                        readOnly
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

@@ -56,7 +56,7 @@ function SideNav() {
         <li>
           <Link
             className={`block my-3 p-3 rounded-lg ${isOpen ? '' : 'bg-gray-300 cursor-not-allowed pointer-events-none'}`}
-            href={isOpen ? `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/cashdrawer` : "#"}
+            href={isOpen ? `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/laos/cashdrawer` : "#"}
           >
             Cash Drawer
           </Link>
