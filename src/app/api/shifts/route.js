@@ -8,8 +8,11 @@ export async function GET() {
     await connectMongoDB();
     console.log("✅ Connected to MongoDB");
 
-    const shifts = await Shift.find().sort({ createdAt: -1 });
-    console.log("✅ Shifts fetched:", shifts.length);
+    const rawShifts = await Shift.find().sort({ createdAt: -1 });
+    const shifts = rawShifts.map(s => ({
+      ...s.toObject(),
+      date: new Date(s.date).toISOString().split("T")[0]
+    }));
 
     return new NextResponse(JSON.stringify({ shifts }), {
       status: 200,
