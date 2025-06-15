@@ -20,6 +20,7 @@ function WelcomePage() {
   const [entries, setEntries] = useState([]);
   const [currentShift, setCurrentShift] = useState(null);
   const [postData, setPostData] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!session) {
@@ -115,6 +116,7 @@ function WelcomePage() {
   }, []);
 
   const handleSubmit = async () => {
+    setIsSubmitting(true);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/cashdrawer`, {
         method: "POST",
@@ -164,6 +166,8 @@ function WelcomePage() {
     } catch (err) {
       alert("เกิดข้อผิดพลาดในการบันทึก");
       console.error(err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -239,8 +243,12 @@ function WelcomePage() {
                       </div>
                       <div className="md:col-span-2 flex justify-end gap-2">
                         <button onClick={() => setShowPopup(false)} className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">ยกเลิก</button>
-                        <button onClick={handleSubmit} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                          บันทึกรายการ
+                        <button
+                          onClick={handleSubmit}
+                          disabled={isSubmitting}
+                          className={`px-4 py-2 rounded text-white ${isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
+                        >
+                          {isSubmitting ? "กำลังบันทึก..." : "บันทึกรายการ"}
                         </button>
                       </div>
                     </div>

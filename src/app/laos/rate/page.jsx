@@ -112,10 +112,10 @@ function RatethaiPage() {
                                   {val.content}
                                 </td>
                                 <td className="py-2 px-4 border-b">
-                                  {val.buylaos}
+                                  {parseFloat(val.buylaos || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                                 </td>
                                 <td className="py-2 px-4 border-b">
-                                  {val.selllaos}
+                                  {parseFloat(val.selllaos || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                                 </td>
                                 <td className="py-2 px-4 border-b space-x-2">
                                   {/* ปุ่ม Edit ถูกซ่อนไว้เพื่อใช้งานในอนาคต */}

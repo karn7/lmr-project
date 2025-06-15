@@ -157,7 +157,7 @@ export default function CloseShiftPage() {
       </button>
       {showConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
+          <div className="bg-white p-6 rounded shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-bold mb-4">ยืนยันการปิดร้าน</h2>
             <p className="mb-4">ตรวจสอบยอดที่กรอก:</p>
             <ul className="mb-4">
@@ -187,7 +187,7 @@ export default function CloseShiftPage() {
       )}
       {summary && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg w-full max-w-xl">
+          <div className="bg-white p-6 rounded shadow-lg w-full max-w-xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-bold mb-4">สรุปการปิดร้าน</h2>
             <table className="w-full mb-4 border border-gray-300">
               <thead>

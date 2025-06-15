@@ -281,7 +281,7 @@ function WelcomePage() {
           const sanitized = parts.length > 2 ? parts[0] + "." + parts.slice(1).join("") : value;
           setExchangeAmount(sanitized);
         }}
-        className="w-full border px-2 py-1"
+        className="w-full border px-2 py-1 bg-yellow-100 text-red-700 font-semibold"
       />
       <div className="mt-2 flex gap-4">
         <label className="inline-flex items-center">
@@ -336,7 +336,7 @@ function WelcomePage() {
             const sanitized = parts.length > 2 ? parts[0] + "." + parts.slice(1).join("") : value;
             setRate(sanitized);
           }}
-          className="w-full border px-2 py-1"
+          className="w-full border px-2 py-1 bg-yellow-100 text-green-600 font-semibold"
         />
       </div>
     </div>

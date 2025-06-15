@@ -66,7 +66,7 @@ function ReportPage() {
       : [];
     
     const filtered = shifts.filter((s) => {
-      const dateMatch = new Date(s.date).toLocaleDateString('sv-SE') === selectedDate;
+      const dateMatch = s.date === selectedDate;
       const branchMatch = selectedBranch === "ทั้งหมด" || s.branch === selectedBranch;
       return dateMatch && branchMatch;
     });

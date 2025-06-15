@@ -238,7 +238,7 @@ function WelcomePage() {
                 <label className="block font-medium">จำนวนที่แลก:</label>
                 <input
                   type="text"
-                  className="w-full border px-2 py-1 text-right"
+                  className="w-full border px-2 py-1 text-right bg-yellow-100 text-red-700 font-semibold"
                   value={
                     exchangeAmount
                       ? parseFloat(exchangeAmount).toLocaleString("th-TH")
