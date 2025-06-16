@@ -108,6 +108,24 @@ function AdminPage() {
                           >
                             ✏️ ปรับยอดเงินกะ
                           </button>
+                          <button
+                            onClick={() => {
+                              const win = window.open(
+                                "/admin/cashtoday",
+                                "_blank",
+                                "width=800,height=600"
+                              );
+                              const timer = setInterval(() => {
+                                if (win.closed) {
+                                  clearInterval(timer);
+                                  refreshBalances();
+                                }
+                              }, 500);
+                            }}
+                            className="ml-2 inline-block px-4 py-2 bg-yellow-600 text-white rounded hover:bg-green-700"
+                          >
+                            ดูยอดเงินทั้งหมดของวันนี้
+                          </button>
                           <h2 className="text-xl font-bold mb-4">ยอดเงินรวมทั้งหมด:</h2>
                           {Object.keys(totalBalance).length > 0 && (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-2 text-gray-800 mb-4 text-sm">
