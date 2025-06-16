@@ -22,7 +22,7 @@ function ExchangePage() {
   const [receiveMethod, setReceiveMethod] = useState("cash");
   const [receiveMethodNote, setReceiveMethodNote] = useState("");
   const [customerName, setCustomerName] = useState("");
-  const [branch, setBranch] = useState("สาขา 1");
+  const [branch, setBranch] = useState("ສາຂາ 1");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [docNumber, setDocNumber] = useState("");
   const [note, setNote] = useState("");
@@ -61,7 +61,7 @@ function ExchangePage() {
       if (data?.open && data?.shiftNo) {
         setCurrentShift(data);
       } else {
-        console.warn("ไม่พบข้อมูลการเปิดร้านหรือร้านถูกปิดแล้ว");
+        console.warn("ບໍ່ພົບຂໍ້ມູນການເປີດຮ້ານ ຫຼືຮ້ານຖືກປິດແລ້ວ");
       }
     };
 
@@ -141,11 +141,11 @@ function ExchangePage() {
 
   const handleSave = async () => {
     if (!isOnline) {
-      alert("ไม่สามารถบันทึกได้เนื่องจากไม่มีการเชื่อมต่ออินเทอร์เน็ต");
+      alert("ບໍ່ສາມາດບັນທຶກໄດ້ ເນື່ອງຈາກບໍ່ມີການເຊື່ອມຕໍ່ອິນເຕີເນັດ");
       return;
     }
 
-    const confirmSave = confirm("คุณต้องการบันทึกรายการหรือไม่?");
+    const confirmSave = confirm("ທ່ານຕ້ອງການບັນທຶກລາຍການບໍ?");
     if (!confirmSave) return;
 
     setIsSaving(true);
@@ -216,7 +216,7 @@ function ExchangePage() {
           "width=500,height=400"
         );
       } else {
-        alert("เกิดข้อผิดพลาดในการบันทึก");
+        alert("ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກ");
       }
     } catch (error) {
       console.error("Error saving record:", error);
@@ -232,12 +232,12 @@ function ExchangePage() {
           href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/laos/exchange`}
           className="bg-gray-500 inline-block text-white border py-2 px-3 rounded my-2"
         >
-          กลับ
+          ກັບຄືນ
         </Link>
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-2 bg-white p-4 rounded shadow mt-2 text-sm">
             <div>
-              <div>เลขที่รายการ</div>
+              <div>ເລກທີລາຍການ</div>
               <input
                 type="text"
                 value={docNumber}
@@ -246,7 +246,7 @@ function ExchangePage() {
               />
             </div>
             <div>
-              <div>วันที่</div>
+              <div>ວັນທີ</div>
               <input
                 type="date"
                 value={date}
@@ -255,7 +255,7 @@ function ExchangePage() {
               />
             </div>
             <div>
-              <div>พนักงาน</div>
+              <div>ພະນັກງານ</div>
               <input
                 type="text"
                 value={session?.user?.name || ""}
@@ -264,7 +264,7 @@ function ExchangePage() {
               />
             </div>
             <div>
-              <div>สาขา</div>
+              <div>ສາຂາ</div>
               <input
                 type="text"
                 value={session?.user?.branch || ""}
@@ -273,7 +273,7 @@ function ExchangePage() {
               />
             </div>
             <div className="col-span-2">
-              <div>ชื่อลูกค้า</div>
+              <div>ຊື່ລູກຄ້າ</div>
               <input
                 type="text"
                 value={customerName}
@@ -286,7 +286,7 @@ function ExchangePage() {
         <input type="hidden" name="paymethod" value="cash" />
         <input type="hidden" name="receivemethod" value="cash" />
         <div className="text-right bg-black text-green-400 px-6 py-4 text-4xl font-bold rounded shadow h-fit">
-          ยอดรวม: {Number.isInteger(totalSum) ? totalSum.toLocaleString() : totalSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
+          ຍອດລວມ: {Number.isInteger(totalSum) ? totalSum.toLocaleString() : totalSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
           <span className="text-sm">LAK</span>
         </div>
       </div>
@@ -324,7 +324,7 @@ function ExchangePage() {
           {selectedCurrency && (
             <>
               <div className="bg-white p-4 rounded shadow">
-                <div className="mb-2">เลือกหน่วย</div>
+                <div className="mb-2">ເລືອກຫນ່ວຍ</div>
                 <div className="flex flex-wrap gap-2">
                   {filteredUnits.map((c, i) => {
                     const isDashUnit = c.content.trim() === "-";
@@ -352,7 +352,7 @@ function ExchangePage() {
               </div>
               <div className="bg-white p-4 rounded shadow grid grid-cols-2 gap-4">
                 <div>
-                  <label>เรท</label>
+                  <label>ເລດ</label>
                   <input
                     type="number"
                     className="w-full px-2 py-1 border rounded"
@@ -361,7 +361,7 @@ function ExchangePage() {
                   />
                 </div>
                 <div>
-                  <label>จำนวน</label>
+                  <label>ຈຳນວນ</label>
                   <input
                     type="text"
                     ref={amountRef}
@@ -378,7 +378,7 @@ function ExchangePage() {
                     onClick={handleAddRecord}
                     className="bg-blue-500 text-white py-2 px-4 rounded"
                   >
-                    เพิ่มรายการ
+                    ເພີ່ມລາຍການ
                   </button>
                 </div>
               </div>
@@ -389,12 +389,12 @@ function ExchangePage() {
             <table className="w-full border">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="border p-2">สกุลเงิน</th>
-                  <th className="border p-2">หน่วย</th>
-                  <th className="border p-2">เรท</th>
-                  <th className="border p-2">จำนวน</th>
-                  <th className="border p-2">รวม</th>
-                  <th className="border p-2">ลบ</th>
+                  <th className="border p-2">ສະກຸນເງິນ</th>
+                  <th className="border p-2">ຫນ່ວຍ</th>
+                  <th className="border p-2">ເລດ</th>
+                  <th className="border p-2">ຈຳນວນ</th>
+                  <th className="border p-2">ລວມ</th>
+                  <th className="border p-2">ລົບ</th>
                 </tr>
               </thead>
               <tbody>
@@ -420,12 +420,12 @@ function ExchangePage() {
           </div>
 
           <div className="mt-4">
-            <label className="block text-white font-semibold mb-1">หมายเหตุ</label>
+            <label className="block text-white font-semibold mb-1">ໝາຍເຫດ</label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               className="w-full px-3 py-2 rounded border text-black"
-              placeholder="กรอกหมายเหตุเพิ่มเติม (ถ้ามี)"
+              placeholder="ປ້ອນໝາຍເຫດເພີ່ມເຕີມ (ຖ້າມີ)"
             />
           </div>
 
@@ -435,7 +435,7 @@ function ExchangePage() {
               className="bg-green-600 text-white py-2 px-6 rounded text-lg"
               disabled={isSaving}
             >
-              {isSaving ? "กำลังบันทึกข้อมูล..." : "บันทึกรายการ"}
+              {isSaving ? "ກຳລັງບັນທຶກຂໍ້ມູນ..." : "ບັນທຶກລາຍການ"}
             </button>
           </div>
         </div>

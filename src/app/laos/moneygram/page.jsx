@@ -236,29 +236,29 @@ function WelcomePage() {
           <div className="bg-white shadow-md rounded-lg p-6 space-y-6">
             <div className="flex justify-between items-center">
               <Link href="/laos/exchange">
-                <button className="text-sm text-blue-600 hover:underline">← กลับ</button>
+                <button className="text-sm text-blue-600 hover:underline">← ກັບຄືນ</button>
               </Link>
               <h2 className="text-xl font-semibold text-gray-700">MoneyGram</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
               <div>
-                <label className="block font-medium">เลขที่:</label>
+                <label className="block font-medium">ເລກທີ:</label>
                 <input type="text" value={docNumber || "รอการสร้าง..."} readOnly className="w-full border px-2 py-1 bg-gray-100" />
               </div>
               <div>
-                <label className="block font-medium">วันที่:</label>
+                <label className="block font-medium">ວັນທີ:</label>
                 <input type="text" value={new Date().toLocaleDateString("th-TH")} readOnly className="w-full border px-2 py-1 bg-gray-100" />
               </div>
               <div>
-                <label className="block font-medium">พนักงาน:</label>
+                <label className="block font-medium">ພະນັກງານ:</label>
                 <input type="text" value={session?.user?.name || ""} readOnly className="w-full border px-2 py-1 bg-gray-100" />
               </div>
               <div>
-                <label className="block font-medium">ชื่อลูกค้า:</label>
+                <label className="block font-medium">ຊື່ລູກຄ້າ:</label>
                 <input type="text" className="w-full border px-2 py-1" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
               </div>
               <div>
-                <label className="block font-medium">สาขา:</label>
+                <label className="block font-medium">ສາຂາ:</label>
                 <input type="text" className="w-full border px-2 py-1 bg-gray-100" value={session?.user?.branch || ""} readOnly />
               </div>
             </div>
@@ -266,9 +266,9 @@ function WelcomePage() {
             <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
   <div className="grid grid-cols-1 sm:grid-cols-1">
     <div>
-      <label className="block font-medium">สกุลเงิน:</label>
+      <label className="block font-medium">ສະກຸນເງິນ:</label>
       <input type="text" value="USD" readOnly className="w-full border px-2 py-1 bg-gray-100" />
-      <label className="block font-medium mt-2">จำนวน (USD):</label>
+      <label className="block font-medium mt-2">ຈຳນວນ (USD):</label>
       <input
         type="number"
         step="0.01"
@@ -293,7 +293,7 @@ function WelcomePage() {
             onChange={(e) => setUsdReceiveMethod(e.target.value)}
             className="form-radio text-blue-600"
           />
-          <span className="ml-2">รับโอนดอลล่า</span>
+          <span className="ml-2">ໄດ້ຮັບໂອນເງິນ USD</span>
         </label>
         <label className="inline-flex items-center">
           <input
@@ -304,12 +304,12 @@ function WelcomePage() {
             onChange={(e) => setUsdReceiveMethod(e.target.value)}
             className="form-radio text-blue-600"
           />
-          <span className="ml-2">รับกีบสด</span>
+          <span className="ml-2">ໄດ້ຮັບເງິນສົດ (LAK)</span>
         </label>
       </div>
       {usdReceiveMethod === "usd" && (
         <div className="mt-4">
-          <label className="block font-medium">ค่าธรรมเนียม (LAK):</label>
+          <label className="block font-medium">ຄ່າທຳນຽມ (LAK):</label>
           <input
             type="text"
             readOnly
@@ -323,7 +323,7 @@ function WelcomePage() {
   {usdReceiveMethod === "lak" && (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
-        <label className="block font-medium">เรท:</label>
+        <label className="block font-medium">ອັດຕາແລກປ່ຽນ:</label>
         <input
           type="number"
           step="0.01"
@@ -344,7 +344,7 @@ function WelcomePage() {
 
   {usdReceiveMethod === "lak" && (
     <div>
-      <label className="block font-medium">รวม (LAK):</label>
+      <label className="block font-medium">ຍອດລວມ (LAK):</label>
       <input
         type="text"
         readOnly
@@ -365,7 +365,7 @@ function WelcomePage() {
             {/* Extra fields for note */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="col-span-full">
-                <label className="block font-medium">หมายเหตุทั่วไป:</label>
+                <label className="block font-medium">ໝາຍເຫດ:</label>
                 <textarea className="w-full border px-2 py-1" value={note} onChange={(e) => setNote(e.target.value)}></textarea>
               </div>
             </div>
@@ -377,7 +377,7 @@ function WelcomePage() {
                 isSaving ? "pointer-events-none opacity-50" : ""
               }`}
             >
-              {isSaving ? "กำลังบันทึกข้อมูล..." : "บันทึกรายการ"}
+              {isSaving ? "ກຳລັງບັນທຶກຂໍ້ມູນ..." : "ບັນທຶກລາຍການ"}
             </button>
           </div>
         </div>

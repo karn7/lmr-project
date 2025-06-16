@@ -147,7 +147,7 @@ function WelcomePage() {
                   onClick={getRecords}
                   className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded"
                 >
-                  🔄 รีเฟรชข้อมูล
+                  🔄 ຣີເຟຣຊຂໍ້ມູນ
                 </button>
               </div>
 
@@ -155,18 +155,18 @@ function WelcomePage() {
                 <thead className="bg-gray-100">
                   <tr>
                     <th className="border px-3 py-2 cursor-pointer" onClick={() => handleSort('docNumber')}>
-                      เลขที่รายการ {sortKey === 'docNumber' && (sortOrder === 'asc' ? '▲' : '▼')}
+                      ເລກທີລາຍການ {sortKey === 'docNumber' && (sortOrder === 'asc' ? '▲' : '▼')}
                     </th>
                     <th className="border px-3 py-2 cursor-pointer" onClick={() => handleSort('createdAt')}>
-                      เวลา {sortKey === 'createdAt' && (sortOrder === 'asc' ? '▲' : '▼')}
+                      ເວລາ {sortKey === 'createdAt' && (sortOrder === 'asc' ? '▲' : '▼')}
                     </th>
                     <th className="border px-3 py-2 cursor-pointer" onClick={() => handleSort('total')}>
-                      ยอดรวม {sortKey === 'total' && (sortOrder === 'asc' ? '▲' : '▼')}
+                      ຍອດລວມ {sortKey === 'total' && (sortOrder === 'asc' ? '▲' : '▼')}
                     </th>
                     <th className="border px-3 py-2 cursor-pointer" onClick={() => handleSort('payType')}>
-                      ประเภท {sortKey === 'payType' && (sortOrder === 'asc' ? '▲' : '▼')}
+                      ປະເພດ {sortKey === 'payType' && (sortOrder === 'asc' ? '▲' : '▼')}
                     </th>
-                    <th className="border px-3 py-2">พิมพ์</th>
+                    <th className="border px-3 py-2">ພິມ</th>
                   </tr>
                 </thead>
                 <tbody>

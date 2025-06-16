@@ -32,7 +32,7 @@ function WelcomePage() {
                     || last.getDate() !== now.getDate();
 
       if (isNewDay) {
-        alert("เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่");
+        alert("ໄອດີໝົດອາຍຸ ກະລຸນາເຂົ້າລະບົບໃໝ່");
         signOut();
       }
     }
@@ -81,7 +81,7 @@ function WelcomePage() {
       if (data?.shiftNo) {
         setCurrentShift(data);
       } else {
-        console.warn("ไม่พบข้อมูลรอบที่เปิดอยู่");
+        console.warn("ບໍ່ພົບຂໍ້ມູນຮອບທີ່ເປີດຢູ່");
       }
     };
     fetchShift();
@@ -100,7 +100,7 @@ function WelcomePage() {
 
   const handleSaveRecord = async () => {
     if (!navigator.onLine) {
-      alert("ไม่สามารถบันทึกข้อมูลได้ เนื่องจากไม่มีการเชื่อมต่ออินเทอร์เน็ต");
+      alert("ບໍ່ສາມາດບັນທຶກໄດ້ ເນື່ອງຈາກບໍ່ມີການເຊື່ອມຕໍ່ອິນເຕີເນັດ");
       return;
     }
 
@@ -158,11 +158,11 @@ function WelcomePage() {
           "width=500,height=400"
         );
       } else {
-        alert("เกิดข้อผิดพลาด: " + data.message);
+        alert("ເກີດຂໍ້ຜິດພາດ: " + data.message);
       }
     } catch (err) {
       console.error("Error saving record:", err);
-      alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+      alert("ເກີດຂໍ້ຜິດພາດໃນການເຊື່ອມຕໍ່ເຊີບເວີ");
     } finally {
       setIsSaving(false);
     }
@@ -176,40 +176,40 @@ function WelcomePage() {
           <div className="bg-white shadow-md rounded-lg p-6 space-y-6">
             <div className="flex justify-between items-center">
               <Link href="/laos/exchange">
-                <button className="text-sm text-blue-600 hover:underline">← กลับ</button>
+                <button className="text-sm text-blue-600 hover:underline">← ກັບຄືນ</button>
               </Link>
               <h2 className="text-xl font-semibold text-gray-700">WECHAT</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
               <div>
-                <label className="block font-medium">เลขที่:</label>
+                <label className="block font-medium">ເລກທີ:</label>
                 <input type="text" value={docNumber || "รอการสร้าง..."} readOnly className="w-full border px-2 py-1 bg-gray-100" />
               </div>
               <div>
-                <label className="block font-medium">วันที่:</label>
+                <label className="block font-medium">ວັນທີ:</label>
                 <input type="text" value={new Date().toLocaleDateString("th-TH")} readOnly className="w-full border px-2 py-1 bg-gray-100" />
               </div>
               <div>
-                <label className="block font-medium">พนักงาน:</label>
+                <label className="block font-medium">ພະນັກງານ:</label>
                 <input type="text" value={session?.user?.name || ""} readOnly className="w-full border px-2 py-1 bg-gray-100" />
               </div>
               <div>
-                <label className="block font-medium">ชื่อลูกค้า:</label>
+                <label className="block font-medium">ຊື່ລູກຄ້າ:</label>
                 <input type="text" className="w-full border px-2 py-1" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
               </div>
               <div>
-                <label className="block font-medium">สาขา:</label>
+                <label className="block font-medium">ສາຂາ:</label>
                 <input type="text" className="w-full border px-2 py-1 bg-gray-100" value={session?.user?.branch || ""} readOnly />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
               <div>
-                <label className="block font-medium">สกุลเงิน:</label>
+                <label className="block font-medium">ສະກຸນເງິນ:</label>
                 <input type="text" value="CNY" readOnly className="w-full border px-2 py-1 bg-gray-100" />
               </div>
               <div>
-                <label className="block font-medium">เรท:</label>
+                <label className="block font-medium">ເລດ:</label>
                 <input
                   type="number"
                   step="0.01"
@@ -235,7 +235,7 @@ function WelcomePage() {
                 />
               </div>
               <div>
-                <label className="block font-medium">จำนวนที่แลก:</label>
+                <label className="block font-medium">ຈຳນວນທີ່ແລກ:</label>
                 <input
                   type="text"
                   className="w-full border px-2 py-1 text-right bg-yellow-100 text-red-700 font-semibold"
@@ -255,7 +255,7 @@ function WelcomePage() {
             </div>
 
             <div>
-              <label className="block font-medium">รวม (LAK):</label>
+              <label className="block font-medium">ລວມ (LAK):</label>
               <input
                 type="text"
                 readOnly
@@ -274,7 +274,7 @@ function WelcomePage() {
             {/* Extra fields for note */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="col-span-full">
-                <label className="block font-medium">หมายเหตุทั่วไป:</label>
+                <label className="block font-medium">ໝາຍເຫດທົ່ວໄປ:</label>
                 <textarea className="w-full border px-2 py-1" value={note} onChange={(e) => setNote(e.target.value)}></textarea>
               </div>
             </div>
@@ -286,7 +286,7 @@ function WelcomePage() {
                 isSaving ? "pointer-events-none opacity-50" : ""
               }`}
             >
-              {isSaving ? "กำลังบันทึกข้อมูล..." : "บันทึกรายการ"}
+              {isSaving ? "ກຳລັງບັນທຶກຂໍ້ມູນ..." : "ບັນທຶກລາຍການ"}
             </button>
           </div>
         </div>

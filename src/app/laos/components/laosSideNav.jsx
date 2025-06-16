@@ -27,9 +27,9 @@ function SideNav() {
     <nav className='shadow-lg p-10 rounded-lg'>
       {isOpen === true && (
         <div className="mb-4 p-4 border border-gray-300 rounded bg-gray-50 text-sm">
-          <h2 className="text-center font-semibold underline mb-2">ข้อมูลการเปิดร้าน</h2>
-          <div><strong>วันที่:</strong> {new Date().toLocaleDateString()}</div>
-          <div><strong>รอบที่:</strong> {`${shiftData?.shiftNo ?? "-"}`}</div>
+          <h2 className="text-center font-semibold underline mb-2">ຂໍ້ມູນການເປີດຮ້ານ</h2>
+          <div><strong>ວັນທີ:</strong> {new Date().toLocaleDateString()}</div>
+          <div><strong>ຮອບທີ່:</strong> {`${shiftData?.shiftNo ?? "-"}`}</div>
         </div>
       )}
       <ul>

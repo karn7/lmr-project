@@ -78,6 +78,8 @@ function WithdrawPage() {
   const [smallNoteCount, setSmallNoteCount] = useState("0");
   // New channel state
   const [channel, setChannel] = useState("NOUKKY");
+  // State for interbank transfer checkbox
+  const [interBankTransfer, setInterBankTransfer] = useState(false);
 
   const [exchangeRates, setExchangeRates] = useState({ THB: 0, USD: 0 });
 
@@ -108,8 +110,10 @@ function WithdrawPage() {
 
   useEffect(() => {
     const converted = calculateConvertedAmount();
-    setFee(calculateFee(converted, currency, smallNoteCount));
-  }, [amount, currency, smallNoteCount, calculateConvertedAmount]);
+    let baseFee = calculateFee(converted, currency, smallNoteCount);
+    if (interBankTransfer) baseFee += 5000;
+    setFee(baseFee);
+  }, [amount, currency, smallNoteCount, calculateConvertedAmount, interBankTransfer]);
 
   useEffect(() => {
     const fetchShift = async () => {
@@ -270,36 +274,36 @@ function WithdrawPage() {
           <div className="bg-white shadow-md rounded-lg p-6 space-y-6">
             <div className="flex justify-between items-center">
               <Link href="/laos/exchange">
-                <button className="text-sm text-blue-600 hover:underline" disabled={isSaving}>← กลับ</button>
+                <button className="text-sm text-blue-600 hover:underline" disabled={isSaving}>← ກັບຄືນ</button>
               </Link>
-              <h2 className="text-xl font-semibold text-gray-700">ฝาก-ถอน</h2>
+              <h2 className="text-xl font-semibold text-gray-700">ຝາກ/ຖອນ</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
               <div>
-                <label className="block font-medium">เลขที่:</label>
-                <input type="text" value={docNumber || "รอการสร้าง..."} readOnly className="w-full border px-2 py-1 bg-gray-100" disabled={isSaving} />
+                <label className="block font-medium">ເລກທີ:</label>
+                <input type="text" value={docNumber || "ລໍຖ້າການສ້າງ..."} readOnly className="w-full border px-2 py-1 bg-gray-100" disabled={isSaving} />
               </div>
               <div>
-                <label className="block font-medium">วันที่:</label>
+                <label className="block font-medium">ວັນທີ:</label>
                 <input type="text" value={new Date().toLocaleDateString("th-TH")} readOnly className="w-full border px-2 py-1 bg-gray-100" disabled={isSaving} />
               </div>
               <div>
-                <label className="block font-medium">พนักงาน:</label>
+                <label className="block font-medium">ພະນັກງານ:</label>
                 <input type="text" value={session?.user?.name || ""} readOnly className="w-full border px-2 py-1 bg-gray-100" disabled={isSaving} />
               </div>
               <div>
-                <label className="block font-medium">ชื่อลูกค้า:</label>
+                <label className="block font-medium">ຊື່ລູກຄ້າ:</label>
                 <input type="text" className="w-full border px-2 py-1" value={customerName} onChange={(e) => setCustomerName(e.target.value)} disabled={isSaving} />
               </div>
               <div>
-                <label className="block font-medium">สาขา:</label>
+                <label className="block font-medium">ສາຂາ:</label>
                 <input type="text" className="w-full border px-2 py-1 bg-gray-100" value={session?.user?.branch || ""} readOnly disabled={isSaving} />
               </div>
             </div>
 
             <div className="space-y-4 text-lg font-semibold">
               <div className="flex items-center space-x-6">
-                <label>ประเภทรายการ:</label>
+                <label>ປະເພດລາຍການ:</label>
                 <label className="inline-flex items-center">
                   <input
                     type="radio"
@@ -310,7 +314,7 @@ function WithdrawPage() {
                     className="form-radio"
                     disabled={isSaving}
                   />
-                  <span className="ml-1">ฝากเงิน</span>
+                  <span className="ml-1">ຝາກເງິນ</span>
                 </label>
                 <label className="inline-flex items-center">
                   <input
@@ -322,11 +326,11 @@ function WithdrawPage() {
                     className="form-radio"
                     disabled={isSaving}
                   />
-                  <span className="ml-1">ถอนเงิน</span>
+                  <span className="ml-1">ຖອນເງິນ</span>
                 </label>
               </div>
               <div className="flex items-center space-x-4">
-                <label className="font-medium">ช่องทาง:</label>
+                <label className="font-medium">ຊ່ອງທາງ:</label>
                 <label className="inline-flex items-center">
                   <input
                     type="radio"
@@ -357,7 +361,7 @@ function WithdrawPage() {
             {/* New currency, amount, fee inputs */}
             <div className="flex flex-col sm:flex-row sm:space-x-6 space-y-4 sm:space-y-0">
               <div className="flex items-center space-x-4">
-                <label className="font-medium">สกุลเงิน:</label>
+                <label className="font-medium">ສະກຸນເງິນ:</label>
                 <div className="flex space-x-4">
                   <label className="inline-flex items-center">
                     <input
@@ -411,7 +415,7 @@ function WithdrawPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4">
-                <label className="font-medium">จำนวนเงิน:</label>
+                <label className="font-medium">ຈຳນວນເງິນ:</label>
                 <input
                   type="text"
                   value={amount ? Number(amount).toLocaleString("th-TH") : ""}
@@ -440,7 +444,7 @@ function WithdrawPage() {
               <div className="flex flex-row space-x-4">
                 <div className="border rounded p-3 flex flex-col">
                   <label className="font-medium">
-                    ค่าธรรมเนียม ({currency === "CNY" ? "หยวน" : "กีบ"}):
+                    ຄ່າທຳນຽມ ({currency === "CNY" ? "ຢວນ" : "ກີບ"}):
                   </label>
                   <input
                     type="text"
@@ -450,10 +454,21 @@ function WithdrawPage() {
                     placeholder="0"
                     disabled={isSaving}
                   />
+                  {/* Interbank transfer checkbox */}
+                  <div className="flex items-center space-x-2 mt-2">
+                    <input
+                      type="checkbox"
+                      id="interbank"
+                      checked={interBankTransfer}
+                      onChange={(e) => setInterBankTransfer(e.target.checked)}
+                      disabled={isSaving}
+                    />
+                    <label htmlFor="interbank" className="text-sm">ໂອນຕ່າງທະນາຄານ</label>
+                  </div>
                 </div>
                 {transactionType === "deposit" && (currency === "THB" || currency === "USD") && (
                   <div className="border rounded p-3 flex flex-col sm:ml-4">
-                    <label className="font-medium">ใบเล็ก (จำนวนกี่ใบ):</label>
+                    <label className="font-medium">ໃບເງິນນ້ອຍ (ຈຳນວນກີ່ໃບ):</label>
                     <input
                       type="text"
                       value={smallNoteCount}
@@ -473,13 +488,13 @@ function WithdrawPage() {
             {/* Extra fields for note */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="col-span-full">
-                <label className="block font-medium">หมายเหตุทั่วไป:</label>
+                <label className="block font-medium">ໝາຍເຫດທົ່ວໄປ:</label>
                 <textarea className="w-full border px-2 py-1" value={note} onChange={(e) => setNote(e.target.value)} disabled={isSaving}></textarea>
               </div>
             </div>
 
             <button onClick={handleSaveRecord} disabled={isSaving} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-              {isSaving ? "กำลังบันทึก..." : "บันทึกรายการ"}
+              {isSaving ? "ກຳລັງບັນທຶກ..." : "ບັນທຶກລາຍການ"}
             </button>
           </div>
         </div>

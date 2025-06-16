@@ -31,7 +31,7 @@ function WelcomePage() {
     const amt = parseFloat((amountTHB || "0").toString().replace(/,/g, ""));
     let fee = 0;
     if (amt > 0 && amt <= 500) fee = 50;
-    else if (amt <= 1000) fee = 60;
+    else if (amt <= 1060) fee = 60;
     else if (amt <= 5000) fee = 80;
     else if (amt <= 10000) fee = 120;
     else if (amt <= 20000) fee = 180;
@@ -283,36 +283,36 @@ function WelcomePage() {
           <div className="bg-white shadow-md rounded-lg p-6 space-y-6">
             <div className="flex justify-between items-center">
               <Link href="/laos/exchange">
-                <button className="text-sm text-blue-600 hover:underline">← กลับ</button>
+                <button className="text-sm text-blue-600 hover:underline">← ກັບຄືນ</button>
               </Link>
               <h2 className="text-xl font-semibold text-gray-700">THAI-LAOS</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
               <div>
-                <label className="block font-medium">เลขที่:</label>
+                <label className="block font-medium">ເລກທີ:</label>
                 <input type="text" value={docNumber || "รอการสร้าง..."} readOnly className="w-full border px-2 py-1 bg-gray-100" />
               </div>
               <div>
-                <label className="block font-medium">วันที่:</label>
+                <label className="block font-medium">ວັນທີ:</label>
                 <input type="text" value={new Date().toLocaleDateString("th-TH")} readOnly className="w-full border px-2 py-1 bg-gray-100" />
               </div>
               <div>
-                <label className="block font-medium">พนักงาน:</label>
+                <label className="block font-medium">ພະນັກງານ:</label>
                 <input type="text" value={session?.user?.name || ""} readOnly className="w-full border px-2 py-1 bg-gray-100" />
               </div>
               <div>
-                <label className="block font-medium">ชื่อลูกค้า:</label>
+                <label className="block font-medium">ຊື່ລູກຄ້າ:</label>
                 <input type="text" className="w-full border px-2 py-1" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
               </div>
               <div>
-                <label className="block font-medium">สาขา:</label>
+                <label className="block font-medium">ສາຂາ:</label>
                 <input type="text" className="w-full border px-2 py-1 bg-gray-100" value={session?.user?.branch || ""} readOnly />
               </div>
             </div>
 
             {/* Radio button for THAI-LAOS or LAOS-THAI */}
             <div className="col-span-full mt-4">
-              <label className="block font-medium mb-2 text-lg">เลือกประเภท:</label>
+              <label className="block font-medium mb-2 text-lg">ເລືອກປະເພດ:</label>
               <div className="flex gap-6 text-lg">
                 <label className="flex items-center space-x-2">
                   <input type="radio" name="direction" value="THAI-LAOS" checked={direction === "THAI-LAOS"} onChange={(e) => setDirection(e.target.value)} />
@@ -328,7 +328,7 @@ function WelcomePage() {
             {/* ช่องกรอกยอดและค่าธรรมเนียม */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center mt-4 border p-4 rounded-md border-gray-300 bg-yellow-50">
               <div className="sm:col-span-2">
-                <label className="block font-medium">ยอดที่โอน:</label>
+                <label className="block font-medium">ຈຳນວນເງິນໂອນ:</label>
                 <input
                   type="text"
                   value={amountTHB}
@@ -341,13 +341,13 @@ function WelcomePage() {
                     }
                   }}
                   className="w-full border px-2 py-1"
-                  placeholder="เช่น 10,000"
+                  placeholder="ຕົວຢ່າງ 10,000"
                 />
               </div>
               <div>
                 <p className="text-red-600 font-semibold mt-6">
-                  ค่าธรรมเนียม: {feeTHB.toLocaleString()} บาท 
-                  หรือ {(feeTHB * rateTHB).toLocaleString()} กีบ
+                  ຄ່າທຳນຽມ: {feeTHB.toLocaleString()} ບາດ 
+                  ຫຼື {(feeTHB * rateTHB).toLocaleString()} ກີບ
                 </p>
               </div>
             </div>
@@ -355,10 +355,10 @@ function WelcomePage() {
 
             {/* Removed ค่าธรรมเนียม inputs and related controls as per instructions */}
             <div className="col-span-full mt-4 border border-gray-300 p-4 rounded-md">
-              <label className="block font-medium text-lg mb-2">ค่าธรรมเนียม</label>
+              <label className="block font-medium text-lg mb-2">ຄ່າທຳນຽມ</label>
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div>
-                  <label className="block font-medium">หักในยอด:</label>
+                  <label className="block font-medium">ຫັກຈາກຍອດ:</label>
                   <input
                     type="number"
                     className="w-full border px-2 py-1"
@@ -367,7 +367,7 @@ function WelcomePage() {
                   />
                 </div>
                 <div>
-                  <label className="block font-medium">บาท(สด):</label>
+                  <label className="block font-medium">ບາດ(ສົດ):</label>
                   <input
                     type="text"
                     className="w-full border px-2 py-1"
@@ -383,7 +383,7 @@ function WelcomePage() {
                   />
                 </div>
                 <div>
-                  <label className="block font-medium">กีบ(สด):</label>
+                  <label className="block font-medium">ກີບ(ສົດ):</label>
                   <input
                     type="text"
                     className="w-full border px-2 py-1"
@@ -399,7 +399,7 @@ function WelcomePage() {
                   />
                 </div>
                 <div>
-                  <label className="block font-medium">โอนกีบ:</label>
+                  <label className="block font-medium">ໂອນເງິນກີບ:</label>
                   <input
                     type="text"
                     className="w-full border px-2 py-1"
@@ -418,10 +418,10 @@ function WelcomePage() {
             </div>
 
             <div className="col-span-full mt-4">
-              <label className="block font-medium text-lg mb-2">รวมเป็นเงิน</label>
+              <label className="block font-medium text-lg mb-2">ລວມເປັນເງິນ</label>
               <div className="border border-gray-300 p-4 rounded-md grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block font-medium">รวมเป็นเงิน (THB):</label>
+                  <label className="block font-medium">ລວມເປັນເງິນ (THB):</label>
                   <input
                     type="number"
                     className="w-full border px-2 py-1 bg-black text-green-500"
@@ -432,7 +432,7 @@ function WelcomePage() {
                 {direction === "LAOS-THAI" ? (
                   <>
                     <div>
-                      <label className="block font-medium">รับบาท (THB):</label>
+                      <label className="block font-medium">ຮັບບາດ (THB):</label>
                       <input
                         type="number"
                         className="w-full border px-2 py-1 bg-black text-green-500"
@@ -441,7 +441,7 @@ function WelcomePage() {
                       />
                     </div>
                     <div>
-                      <label className="block font-medium">รับกีบ (LAK):</label>
+                      <label className="block font-medium">ຮັບກີບ (LAK):</label>
                       <input
                         type="number"
                         className="w-full border px-2 py-1 bg-black text-green-500"
@@ -457,7 +457,7 @@ function WelcomePage() {
                 ) : (
                   <>
                     <div>
-                      <label className="block font-medium">จ่ายบาท (THB):</label>
+                      <label className="block font-medium">ຈ່າຍບາດ (THB):</label>
                       <input
                         type="number"
                         className="w-full border px-2 py-1 bg-black text-green-500"
@@ -466,7 +466,7 @@ function WelcomePage() {
                       />
                     </div>
                     <div>
-                      <label className="block font-medium">จ่ายกีบ (LAK):</label>
+                      <label className="block font-medium">ຈ່າຍກີບ (LAK):</label>
                       <input
                         type="number"
                         className="w-full border px-2 py-1 bg-black text-green-500"
@@ -486,7 +486,7 @@ function WelcomePage() {
             {/* Extra fields for note */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="col-span-full">
-                <label className="block font-medium">หมายเหตุทั่วไป:</label>
+                <label className="block font-medium">ໝາຍເຫດທົ່ວໄປ:</label>
                 <textarea className="w-full border px-2 py-1" value={note} onChange={(e) => setNote(e.target.value)}></textarea>
               </div>
             </div>
@@ -498,7 +498,7 @@ function WelcomePage() {
                 isSaving ? "pointer-events-none opacity-50" : ""
               }`}
             >
-              {isSaving ? "กำลังบันทึกข้อมูล..." : "บันทึกรายการ"}
+              {isSaving ? "ກຳລັງບັນທຶກຂໍ້ມູນ..." : "ບັນທຶກລາຍການ"}
             </button>
           </div>
         </div>

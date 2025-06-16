@@ -185,40 +185,40 @@ function WelcomePage() {
             </div>
             <div className="flex-grow">
               <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-2">ข้อมูลการเปิดร้าน</h2>
+                <h2 className="text-xl font-semibold mb-2">ຂໍ້ມູນການເປີດຮ້ານ</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div><strong>สาขา:</strong> {session?.user?.branch}</div>
-                  <div><strong>วันที่:</strong> {new Date().toLocaleDateString()}</div>
-                  <div><strong>รอบที่เปิด:</strong> {currentShift?.shiftNo || "-"}</div>
-                  <div><strong>พนักงาน:</strong> {session?.user?.name}</div>
+                  <div><strong>ສາຂາ:</strong> {session?.user?.branch}</div>
+                  <div><strong>ວັນທີ:</strong> {new Date().toLocaleDateString()}</div>
+                  <div><strong>ກະທີ່ເປີດ:</strong> {currentShift?.shiftNo || "-"}</div>
+                  <div><strong>ພະນັກງານ:</strong> {session?.user?.name}</div>
                 </div>
               </div>
 
               <div className="mb-6">
                 <button onClick={() => setShowPopup(true)} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-                  เพิ่มรายการ
+                  ເພີ່ມລາຍການ
                 </button>
               </div>
               {showPopup && (
                 <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
                   <div className="bg-white p-6 rounded shadow-md w-full max-w-xl">
-                    <h2 className="text-lg font-bold mb-4">เพิ่มรายการเงินเข้า-ออก</h2>
+                    <h2 className="text-lg font-bold mb-4">ເພີ່ມລາຍການເງິນເຂົ້າ-ອອກ</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium mb-1">ประเภท:</label>
+                        <label className="block text-sm font-medium mb-1">ປະເພດ:</label>
                         <div className="flex items-center gap-4">
                           <label className="inline-flex items-center">
                             <input type="radio" name="type" value="in" checked={entryType === "in"} onChange={() => setEntryType("in")} className="mr-2" />
-                            นำเงินเข้า
+                            ເງິນເຂົ້າ
                           </label>
                           <label className="inline-flex items-center">
                             <input type="radio" name="type" value="out" checked={entryType === "out"} onChange={() => setEntryType("out")} className="mr-2" />
-                            นำเงินออก
+                            ເງິນອອກ
                           </label>
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">สกุลเงิน:</label>
+                        <label className="block text-sm font-medium mb-1">ສະກຸນເງິນ:</label>
                         <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="w-full border p-2 rounded">
                           {postData.map((item, index) => (
                             <option key={index} value={item.title}>
@@ -228,7 +228,7 @@ function WelcomePage() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">จำนวน:</label>
+                        <label className="block text-sm font-medium mb-1">ຈຳນວນ:</label>
                         <input
                           type="text"
                           value={Number(amount).toLocaleString("en-US")}
@@ -237,17 +237,17 @@ function WelcomePage() {
                         />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-1">เหตุผล:</label>
+                        <label className="block text-sm font-medium mb-1">ເຫດຜົນ:</label>
                         <textarea value={reason} onChange={(e) => setReason(e.target.value)} className="w-full border p-2 rounded" rows={2}></textarea>
                       </div>
                       <div className="md:col-span-2 flex justify-end gap-2">
-                        <button onClick={() => setShowPopup(false)} className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">ยกเลิก</button>
+                        <button onClick={() => setShowPopup(false)} className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">ຍົກເລີກ</button>
                         <button
                           onClick={handleSubmit}
                           disabled={isSubmitting}
                           className={`px-4 py-2 rounded text-white ${isSubmitting ? "bg-blue-300 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
                         >
-                          {isSubmitting ? "กำลังบันทึก..." : "บันทึกรายการ"}
+                          {isSubmitting ? "ກຳລັງບັນທຶກ..." : "ບັນທຶກລາຍການ"}
                         </button>
                       </div>
                     </div>
@@ -255,22 +255,22 @@ function WelcomePage() {
                 </div>
               )}
               <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-2">รายการที่เพิ่มวันนี้</h2>
-                <p className="text-sm text-gray-500 mb-2">โหลด {entries.length} รายการ</p>
+                <h2 className="text-xl font-semibold mb-2">ລາຍການທີ່ເພີ່ມມື້ນີ້</h2>
+                <p className="text-sm text-gray-500 mb-2">ໂຫຼດ {entries.length} ລາຍການ</p>
                 <table className="w-full border">
                   <thead className="bg-gray-100">
                     <tr>
-                      <th className="border px-4 py-2">ประเภท</th>
-                      <th className="border px-4 py-2">จำนวน</th>
-                      <th className="border px-4 py-2">สกุลเงิน</th>
-                      <th className="border px-4 py-2">เหตุผล</th>
+                      <th className="border px-4 py-2">ປະເພດ</th>
+                      <th className="border px-4 py-2">ຈຳນວນ</th>
+                      <th className="border px-4 py-2">ສະກຸນເງິນ</th>
+                      <th className="border px-4 py-2">ເຫດຜົນ</th>
                     </tr>
                   </thead>
                   <tbody>
                     {console.log("📋 Entries to render:", entries)}
                     {entries.length === 0 ? (
                       <tr>
-                        <td colSpan="4" className="text-center py-4">ยังไม่มีรายการ</td>
+                        <td colSpan="4" className="text-center py-4">ຍັງບໍ່ມີລາຍການ</td>
                       </tr>
                     ) : (
                       entries.map((entry, index) => {
@@ -278,7 +278,7 @@ function WelcomePage() {
                         return (
                           <tr key={index}>
                             <td className="border px-4 py-2">
-                              {entry.type === "in" ? "นำเงินเข้า" : "นำเงินออก"}
+                              {entry.type === "in" ? "ເງິນເຂົ້າ" : "ເງິນອອກ"}
                             </td>
                             <td className="border px-4 py-2">{Number(entry.amount).toLocaleString("en-US")}</td>
                             <td className="border px-4 py-2">{entry.currency}</td>

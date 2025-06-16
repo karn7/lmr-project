@@ -26,8 +26,8 @@ function Navbar({ session }) {
                       <li className="mx-3">
                       <div className="flex items-center space-x-4">
                         <div className="flex flex-col">
-                          <span className="text-gray-800 text-lg font-medium">👋 สวัสดี คุณ{session.user.name}</span>
-                          <span className="text-gray-500 text-sm">สาขา : {session.user.branch}</span>
+                          <span className="text-gray-800 text-lg font-medium">👋 ສະບາຍດີ ທ່ານ{session.user.name}</span>
+                          <span className="text-gray-500 text-sm">ສາຂາ : {session.user.branch}</span>
                         </div>
                         <div className="h-10 border-l border-gray-400" />
                         <button onClick={() => signOut()} className="bg-red-500 text-white py-2 px-3 rounded-md text-lg hover:bg-red-600">Logout</button>

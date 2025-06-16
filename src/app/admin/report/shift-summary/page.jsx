@@ -66,7 +66,8 @@ function ReportPage() {
       : [];
     
     const filtered = shifts.filter((s) => {
-      const dateMatch = s.date === selectedDate;
+      const shiftDate = new Date(s.date).toISOString().split("T")[0];
+      const dateMatch = shiftDate === selectedDate;
       const branchMatch = selectedBranch === "ทั้งหมด" || s.branch === selectedBranch;
       return dateMatch && branchMatch;
     });
