@@ -1,12 +1,13 @@
-"export const dynamic = \"force-dynamic\";"
 "use client"
+
+export const dynamic = "force-dynamic";
 import { useRouter } from 'next/navigation';
 
 import React, { useState, useEffect } from 'react'
 import AdminNav from '../../components/AdminNav'
 import Container from '../../components/Container'
 import Footer from '../../components/Footer'
-import SideNav from '../../components/SideNav'
+import AdminLayout from '../../components/AdminLayout'
 
 import { useSession, signOut } from 'next-auth/react'
 import { redirect } from 'next/navigation'
@@ -24,6 +25,7 @@ function ReportPage() {
     const [employees, setEmployees] = useState([]);
     const [types, setTypes] = useState([]);
     const [showDailyReport, setShowDailyReport] = useState(false);
+    const [selectedRow, setSelectedRow] = useState(null);
     const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
     useEffect(() => {
@@ -94,61 +96,39 @@ function ReportPage() {
 
   return (
     <Container>
-      <div className="flex flex-col min-h-screen">
+      <div className="hidden md:block">
         <AdminNav session={session} />
-        <div className="flex flex-grow px-6 mt-6">
-          <div className="w-64 mr-6">
-            <SideNav />
-          </div>
-          <div className="flex-grow">
-            <div className="border rounded-lg p-4 bg-white shadow-sm w-max mb-6">
-              <div className="flex space-x-4">
-                <button
-                  onClick={() => router.push(`${basePath}/admin/report/daily`)}
-                  className="bg-gray-400 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded"
+      </div>
+      <div className="flex-grow">
+        <AdminLayout session={session}>
+          <div className="border rounded-lg p-6 bg-white shadow-sm">
+            <div className="flex flex-wrap items-end gap-4 mb-4">
+              <label className="flex flex-col text-sm font-medium">
+                วันที่:
+                <input
+                  type="date"
+                  className="border p-2 rounded w-32 h-10"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                />
+              </label>
+              <label className="flex flex-col text-sm font-medium">
+                สาขา:
+                <select
+                  className="border p-2 rounded w-32 h-10"
+                  value={selectedBranch}
+                  onChange={(e) => setSelectedBranch(e.target.value)}
                 >
-                  รายงานประจำวัน
-                </button>
-                <button
-                  onClick={() => router.push(`${basePath}/admin/report/cash-drawer`)}
-                  className="bg-gray-400 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded"
-                >
-                  รายงานลิ้นชักเก็บเงิน
-                </button>
-                <button
-                  onClick={() => router.push(`${basePath}/admin/report/shift-summary`)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded"
-                >
-                  รายงานเปิดปิดร้าน
-                </button>
-              </div>
+                  <option>ทั้งหมด</option>
+                  {branches.map((b) => (
+                    <option key={b}>{b}</option>
+                  ))}
+                </select>
+              </label>
             </div>
-            <div className="border rounded-lg p-6 bg-white shadow-sm">
-              <div className="flex flex-wrap items-end gap-4 mb-4">
-                <label className="flex flex-col text-sm font-medium">
-                  วันที่:
-                  <input
-                    type="date"
-                    className="border p-2 rounded w-32 h-10"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                  />
-                </label>
-                <label className="flex flex-col text-sm font-medium">
-                  สาขา:
-                  <select
-                    className="border p-2 rounded w-32 h-10"
-                    value={selectedBranch}
-                    onChange={(e) => setSelectedBranch(e.target.value)}
-                  >
-                    <option>ทั้งหมด</option>
-                    {branches.map((b) => (
-                      <option key={b}>{b}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
 
+            {/* Desktop Table */}
+            <div className="hidden md:block">
               <table className="w-full text-left border mb-10">
                 <thead className="bg-gray-100">
                   <tr>
@@ -177,10 +157,35 @@ function ReportPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile View */}
+            <div className="md:hidden space-y-4">
+              {filtered.map((s) => (
+                <div
+                  key={s._id}
+                  className="border rounded p-4 shadow"
+                  onClick={() => setSelectedRow(selectedRow === s._id ? null : s._id)}
+                >
+                  <div><strong>สาขา:</strong> {s.branch}</div>
+                  <div><strong>พนักงาน:</strong> {s.employee}</div>
+                  <div><strong>รอบ:</strong> {s.shiftNo}</div>
+                  {selectedRow === s._id && (
+                    <div className="mt-3">
+                      <button
+                        onClick={() => window.open(`${basePath}/summary/${s._id}`, "_blank")}
+                        className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
+                      >
+                        ดูรายละเอียด
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-        <Footer />
+        </AdminLayout>
       </div>
+      <Footer />
     </Container>
   )
 }

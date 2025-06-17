@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react'
 import AdminNav from '../components/AdminNav'
 import Footer from '../components/Footer'
-import SideNav from '../components/SideNav'
+import Container from '../components/Container'
+import AdminLayout from '../components/AdminLayout'
 
 import { useSession, signOut } from 'next-auth/react'
 import { redirect } from 'next/navigation'
@@ -104,7 +105,7 @@ function AdminPage() {
     };
 
     useEffect(() => {
-      if (session?.user?.role !== "admin") {
+      if (session && session.user?.role !== "admin") {
         redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/welcome`);
       }
     }, [session]);
@@ -217,98 +218,96 @@ function AdminPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <AdminNav session={session} />
-      <div className='flex-grow'>
-        <div className='container mx-auto'>
-          <div className='flex justify-between mt-10'>
-            <SideNav />
-            <div className="flex-grow border rounded-lg p-4 bg-white shadow-sm mb-6 w-full">
-              <div className="flex space-x-4 mt-2 ml-2">
-                <select
-                  className="px-4 py-2 border rounded bg-white text-gray-700"
-                  value={selectedBranch}
-                  onChange={(e) => setSelectedBranch(e.target.value)}
-                >
-                  <option value="">-- เลือกสาขา --</option>
-                  {branches.map((b) => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
-                <input
-                  type="date"
-                  value={selectedDateForDailyStock.start || today}
-                  onChange={(e) => {
-                    const date = new Date(e.target.value);
-                    const formatted = date.toISOString().split("T")[0];
-                    setSelectedDateForDailyStock((prev) => ({ ...prev, start: formatted }));
-                  }}
-                  className="border rounded px-2 py-2"
+    <Container>
+      <div className="hidden md:block">
+        <AdminNav session={session} />
+      </div>
+      <div className="flex-grow">
+        <AdminLayout>
+          <div className="flex-grow border rounded-lg p-4 bg-white shadow-sm mb-6 w-full">
+            <div className="flex space-x-4 mt-2 ml-2">
+              <select
+                className="px-4 py-2 border rounded bg-white text-gray-700"
+                value={selectedBranch}
+                onChange={(e) => setSelectedBranch(e.target.value)}
+              >
+                <option value="">-- เลือกสาขา --</option>
+                {branches.map((b) => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+              <input
+                type="date"
+                value={selectedDateForDailyStock.start || today}
+                onChange={(e) => {
+                  const date = new Date(e.target.value);
+                  const formatted = date.toISOString().split("T")[0];
+                  setSelectedDateForDailyStock((prev) => ({ ...prev, start: formatted }));
+                }}
+                className="border rounded px-2 py-2"
+                disabled={!selectedBranch}
+              />
+              {!alreadyCalculated && (
+                <button
+                  onClick={handleCalculateStock}
                   disabled={!selectedBranch}
-                />
-                {!alreadyCalculated && (
-                  <button
-                    onClick={handleCalculateStock}
-                    disabled={!selectedBranch}
-                    className={`${
-                      selectedBranch ? "bg-blue-500 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"
-                    } text-white font-bold py-2 px-4 rounded`}
-                  >
-                    คำนวณสต๊อก
-                  </button>
-                )}
-              </div>
-              {showStockTable && (
-                <>
-                  <div className="mt-6 mb-4">
-                    <button
-                      onClick={handleSaveStock}
-                      className="bg-purple-600 hover:bg-purple-800 text-white font-bold py-2 px-4 rounded"
-                    >
-                      บันทึกข้อมูล
-                    </button>
-                  </div>
-                  <div className="mt-4">
-                    <table className="min-w-full border border-gray-300 text-sm">
-                      <thead className="bg-gray-100">
-                        <tr>
-                          <th className="border px-4 py-2">สกุลเงิน</th>
-                          <th className="border px-4 py-2">ยอดยกมา</th>
-                          <th className="border px-4 py-2">เข้า/ออกวันนี้</th>
-                          <th className="border px-4 py-2">รวมทั้งหมด</th>
-                          <th className="border px-4 py-2">เรทเฉลี่ย</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {currencyTitles.map((post, index) => (
-                          <tr key={index}>
-                            <td className="border px-4 py-2">{post.title}</td>
-                            <td className="border px-4 py-2">
-                              {stockMap.get(post.title)?.carryOver ?? 0}
-                            </td>
-                            <td className="border px-4 py-2">
-                              {stockMap.get(post.title)?.inOutTotal ?? 0}
-                            </td>
-                            <td className="border px-4 py-2">
-                              {(stockMap.get(post.title)?.carryOver ?? 0) + (stockMap.get(post.title)?.inOutTotal ?? 0)}
-                            </td>
-                            <td className="border px-4 py-2">
-                              {stockMap.get(post.title)?.averageRate ?? 0}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
+                  className={`${
+                    selectedBranch ? "bg-blue-500 hover:bg-blue-700" : "bg-gray-400 cursor-not-allowed"
+                  } text-white font-bold py-2 px-4 rounded`}
+                >
+                  คำนวณสต๊อก
+                </button>
               )}
             </div>
+            {showStockTable && (
+              <>
+                <div className="mt-6 mb-4">
+                  <button
+                    onClick={handleSaveStock}
+                    className="bg-purple-600 hover:bg-purple-800 text-white font-bold py-2 px-4 rounded"
+                  >
+                    บันทึกข้อมูล
+                  </button>
+                </div>
+                <div className="mt-4 overflow-x-auto">
+                  <table className="min-w-full border border-gray-300 text-xs md:text-sm">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="border px-4 py-2">สกุลเงิน</th>
+                        <th className="border px-4 py-2">ยอดยกมา</th>
+                        <th className="border px-4 py-2">เข้า/ออกวันนี้</th>
+                        <th className="border px-4 py-2">รวมทั้งหมด</th>
+                        <th className="border px-4 py-2">เรทเฉลี่ย</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {currencyTitles.map((post, index) => (
+                        <tr key={index}>
+                          <td className="border px-4 py-2">{post.title}</td>
+                          <td className="border px-4 py-2">
+                            {stockMap.get(post.title)?.carryOver ?? 0}
+                          </td>
+                          <td className="border px-4 py-2">
+                            {stockMap.get(post.title)?.inOutTotal ?? 0}
+                          </td>
+                          <td className="border px-4 py-2">
+                            {(stockMap.get(post.title)?.carryOver ?? 0) + (stockMap.get(post.title)?.inOutTotal ?? 0)}
+                          </td>
+                          <td className="border px-4 py-2">
+                            {stockMap.get(post.title)?.averageRate ?? 0}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </div>
-        </div>
+        </AdminLayout>
       </div>
       <Footer />
-
-    </div>
+    </Container>
   )
 }
 

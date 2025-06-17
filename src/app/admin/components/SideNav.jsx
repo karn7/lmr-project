@@ -1,20 +1,129 @@
-import React from 'react'
-import Link from 'next/link'
+import React, { useState } from 'react';
+import Link from 'next/link';
 
-function SideNav() {
+function SideNav({ collapsed }) {
+  const [showReportSubMenu, setShowReportSubMenu] = useState(false);
+  const [showStockSubMenu, setShowStockSubMenu] = useState(false);
+
   return (
     <nav className='shadow-lg p-10 rounded-lg'>
-        <ul>
-            <li><Link className='block my-3 p-3 rounded-lg' href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin`}>Dashboard</Link></li>
-            <li><Link className='block my-3 p-3 rounded-lg' href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/users`}>Users</Link></li>
-            <li><Link className='block my-3 p-3 rounded-lg' href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/rateadmin`}>Rate</Link></li>
-            <li><Link className='block my-3 p-3 rounded-lg' href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/report`}>Report</Link></li>
-            <li><Link className='block my-3 p-3 rounded-lg' href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/cash`}>Cash</Link></li>
-            <li><Link className='block my-3 p-3 rounded-lg' href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/stock`}>Stocks</Link></li>
-            <li><Link className='block my-3 p-3 rounded-lg' href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/wholesale`}>Wholesale</Link></li>
-        </ul>
+      <ul>
+        <li>
+          <Link
+            href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin`}
+            className="flex items-center gap-3 my-3 p-3 rounded-lg hover:bg-gray-100"
+          >
+            <span>🏠</span>
+            {!collapsed && <span>Dashboard</span>}
+          </Link>
+        </li>
+        <li>
+          <Link
+            href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/users`}
+            className="flex items-center gap-3 my-3 p-3 rounded-lg hover:bg-gray-100"
+          >
+            <span>👥</span>
+            {!collapsed && <span>Users</span>}
+          </Link>
+        </li>
+        <li>
+          <Link
+            href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/rateadmin`}
+            className="flex items-center gap-3 my-3 p-3 rounded-lg hover:bg-gray-100"
+          >
+            <span>💱</span>
+            {!collapsed && <span>Rate</span>}
+          </Link>
+        </li>
+        <li>
+          <button
+            className="flex items-center gap-3 w-full text-left my-3 p-3 rounded-lg hover:bg-gray-100"
+            onClick={() => setShowReportSubMenu(!showReportSubMenu)}
+          >
+            <span>📊</span>
+            {!collapsed && <span>Report</span>}
+            {!collapsed && (
+              <span className="ml-auto">{showReportSubMenu ? '▲' : '▼'}</span>
+            )}
+          </button>
+          {showReportSubMenu && (
+            <ul className="ml-8 text-sm text-gray-700">
+              <li>
+                <Link
+                  href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/report/daily`}
+                  className="flex items-center gap-3 my-2 p-2 rounded-lg hover:bg-gray-100"
+                >
+                  <span>📊</span>
+                  {!collapsed && <span>รายงานประจำวัน</span>}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/report/cash-drawer`}
+                  className="flex items-center gap-3 my-2 p-2 rounded-lg hover:bg-gray-100"
+                >
+                  <span>📊</span>
+                  {!collapsed && <span>รายงานลิ้นชักเก็บเงิน</span>}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/report/shift-summary`}
+                  className="flex items-center gap-3 my-2 p-2 rounded-lg hover:bg-gray-100"
+                >
+                  <span>📊</span>
+                  {!collapsed && <span>รายงานเปิดปิดร้าน</span>}
+                </Link>
+              </li>
+            </ul>
+          )}
+        </li>
+        <li>
+          <button
+            className="flex items-center gap-3 w-full text-left my-3 p-3 rounded-lg hover:bg-gray-100"
+            onClick={() => setShowStockSubMenu(!showStockSubMenu)}
+          >
+            <span>📦</span>
+            {!collapsed && <span>Stocks</span>}
+            {!collapsed && (
+              <span className="ml-auto">{showStockSubMenu ? '▲' : '▼'}</span>
+            )}
+          </button>
+          {showStockSubMenu && (
+            <ul className="ml-8 text-sm text-gray-700">
+              <li>
+                <Link
+                  href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/stock`}
+                  className="flex items-center gap-3 my-2 p-2 rounded-lg hover:bg-gray-100"
+                >
+                  <span>📦</span>
+                  {!collapsed && <span>Stock</span>}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/wholesale`}
+                  className="flex items-center gap-3 my-2 p-2 rounded-lg hover:bg-gray-100"
+                >
+                  <span>🏬</span>
+                  {!collapsed && <span>Wholesale</span>}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/stock11`}
+                  className="flex items-center gap-3 my-2 p-2 rounded-lg hover:bg-gray-100"
+                >
+                  <span>📝</span>
+                  {!collapsed && <span>บันทึกย้อนหลัง</span>}
+                </Link>
+              </li>
+            </ul>
+          )}
+        </li>
+      </ul>
     </nav>
-  )
+  );
 }
 
-export default SideNav
+export default SideNav;

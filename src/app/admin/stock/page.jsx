@@ -1,6 +1,8 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
+import Container from '../components/Container'
+import AdminLayout from '../components/AdminLayout'
 import AdminNav from '../components/AdminNav'
 import Footer from '../components/Footer'
 import SideNav from '../components/SideNav'
@@ -283,13 +285,14 @@ function AdminPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <AdminNav session={session} />
-      <div className='flex-grow'>
-        <div className='container mx-auto'>
-          <div className='flex justify-between mt-10'>
-            <SideNav />
-            <div className="flex-grow border rounded-lg p-4 bg-white shadow-sm mb-6 w-full">
+    <Container className="min-h-screen flex flex-col">
+      <div className="hidden md:block">
+        <AdminNav session={session} />
+      </div>
+      <div className="flex-grow">
+        <AdminLayout session={session}>
+          <div className="container mx-auto">
+            <div className="border rounded-lg p-4 bg-white shadow-sm mb-6 w-full mt-10">
               <div className="flex space-x-4 mt-2 ml-2">
                 <select
                   className="px-4 py-2 border rounded bg-white text-gray-700"
@@ -374,14 +377,6 @@ function AdminPage() {
                     ดูสต๊อกรายวัน
                   </button>
                 </div>
-                <button
-                  className="bg-gray-600 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded"
-                  onClick={() => {
-                    router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/stock11`);
-                  }}
-                >
-                  บันทึกสต๊อกย้อนหลัง
-                </button>
               </div>
               {showStockTable && (
                 <>
@@ -429,11 +424,10 @@ function AdminPage() {
               )}
             </div>
           </div>
-        </div>
+        </AdminLayout>
       </div>
       <Footer />
-
-    </div>
+    </Container>
   )
 }
 

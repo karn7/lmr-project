@@ -3,9 +3,9 @@ import { useRouter } from 'next/navigation';
 
 import React, { useState, useEffect } from 'react'
 import AdminNav from '../../components/AdminNav'
+import AdminLayout from '../../components/AdminLayout'
 import Container from '../../components/Container'
 import Footer from '../../components/Footer'
-import SideNav from '../../components/SideNav'
 
 import { useSession, signOut } from 'next-auth/react'
 import { redirect } from 'next/navigation'
@@ -89,104 +89,79 @@ function ReportPage() {
 
   return (
     <Container>
-      <div className="flex flex-col min-h-screen">
+      <div className="hidden md:block">
         <AdminNav session={session} />
-        <div className="flex flex-grow px-6 mt-6">
-          <div className="w-64 mr-6">
-            <SideNav />
-          </div>
-          <div className="flex-grow">
-          <div className="border rounded-lg p-4 bg-white shadow-sm w-max mb-6">
-          <div className="flex space-x-4">
-                <button
-                  onClick={() => router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/report/daily`)}
-                  className="bg-gray-400 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded"
-                >
-                  รายงานประจำวัน
-                </button>
-                <button
-                  onClick={() => router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/report/cash-drawer`)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded"
-                >
-                  รายงานลิ้นชักเก็บเงิน
-                </button>
-                <button
-                  onClick={() => router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/report/shift-summary`)}
-                  className="bg-gray-400 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded"
-                >
-                  รายงานเปิดปิดร้าน
-                </button>
-              </div>
-            </div>
-            <div className="border rounded-lg p-6 bg-white shadow-sm">
-              <div className="mb-6 flex flex-wrap items-end gap-4">
-                <label className="flex flex-col text-sm font-medium">
-                  วันที่:
-                  <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="border px-2 py-1 w-40"
-                  />
-                </label>
-                <label className="flex flex-col text-sm font-medium">
-                  ชื่อพนักงาน:
-                  <select
-                    value={selectedEmployee}
-                    onChange={(e) => setSelectedEmployee(e.target.value)}
-                    className="border px-2 py-1 w-40"
-                  >
-                    <option value="ทั้งหมด">-- เลือกพนักงาน --</option>
-                    {employees.map((name) => (
-                      <option key={name} value={name}>
-                        {name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              {loading ? (
-                <p>กำลังโหลดข้อมูล...</p>
-              ) : (
-                cashDrawerEntries.map((group, index) => (
-                  <div key={index} className="border rounded p-4 mb-6">
-                    <h2 className="text-lg font-semibold mb-2">
-                      วันที่: {selectedDate} | รอบที่: {group.shiftNo}
-                    </h2>
-                    <table className="table-auto w-full border">
-                      <thead>
-                        <tr className="bg-gray-100">
-                          <th className="border px-4 py-2">เวลา</th>
-                          <th className="border px-4 py-2">ประเภท</th>
-                          <th className="border px-4 py-2">สกุลเงิน</th>
-                          <th className="border px-4 py-2">จำนวนเงิน</th>
-                          <th className="border px-4 py-2">เหตุผล</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {group.entries.map((entry, idx) => (
-                          <tr key={idx}>
-                            <td className="border px-4 py-2">
-                              {new Date(entry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </td>
-                            <td className="border px-4 py-2">{entry.type === "in" ? "นำเข้า" : entry.type === "out" ? "นำออก" : "-"}</td>
-                            <td className="border px-4 py-2">{entry.currency}</td>
-                            <td className={`border px-4 py-2 text-right ${entry.amount < 0 ? "text-red-500" : ""}`}>
-                              {Number(entry.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </td>
-                            <td className="border px-4 py-2">{entry.reason || "-"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-        <Footer />
       </div>
+      <div className="flex-grow">
+        <AdminLayout session={session}>
+          <div className="border rounded-lg p-6 bg-white shadow-sm">
+            <div className="mb-6 flex flex-wrap items-end gap-4">
+              <label className="flex flex-col text-sm font-medium">
+                วันที่:
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="border px-2 py-1 w-40"
+                />
+              </label>
+              <label className="flex flex-col text-sm font-medium">
+                ชื่อพนักงาน:
+                <select
+                  value={selectedEmployee}
+                  onChange={(e) => setSelectedEmployee(e.target.value)}
+                  className="border px-2 py-1 w-40"
+                >
+                  <option value="ทั้งหมด">-- เลือกพนักงาน --</option>
+                  {employees.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {loading ? (
+              <p>กำลังโหลดข้อมูล...</p>
+            ) : (
+              cashDrawerEntries.map((group, index) => (
+                <div key={index} className="border rounded p-4 mb-6">
+                  <h2 className="text-lg font-semibold mb-2">
+                    วันที่: {selectedDate} | รอบที่: {group.shiftNo}
+                  </h2>
+                  <table className="table-auto w-full border">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="border px-4 py-2">เวลา</th>
+                        <th className="border px-4 py-2">ประเภท</th>
+                        <th className="border px-4 py-2">สกุลเงิน</th>
+                        <th className="border px-4 py-2">จำนวนเงิน</th>
+                        <th className="border px-4 py-2">เหตุผล</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.entries.map((entry, idx) => (
+                        <tr key={idx}>
+                          <td className="border px-4 py-2">
+                            {new Date(entry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                          <td className="border px-4 py-2">{entry.type === "in" ? "นำเข้า" : entry.type === "out" ? "นำออก" : "-"}</td>
+                          <td className="border px-4 py-2">{entry.currency}</td>
+                          <td className={`border px-4 py-2 text-right ${entry.amount < 0 ? "text-red-500" : ""}`}>
+                            {Number(entry.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                          <td className="border px-4 py-2">{entry.reason || "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))
+            )}
+          </div>
+        </AdminLayout>
+      </div>
+      <Footer />
     </Container>
   )
 }
