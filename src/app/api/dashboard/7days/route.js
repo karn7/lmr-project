@@ -77,5 +77,58 @@ export async function GET(req) {
     }
   ]);
 
-  return NextResponse.json({ data: result, types });
+  const typesByBranch = await Record.aggregate([
+    { $match: matchCondition },
+    {
+      $addFields: {
+        date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          payType: "$payType",
+          branch: "$branch",
+          date: "$date"
+        },
+        count: { $sum: 1 }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          payType: "$_id.payType",
+          date: "$_id.date"
+        },
+        branches: {
+          $push: {
+            k: "$_id.branch",
+            v: "$count"
+          }
+        }
+      }
+    },
+    {
+      $project: {
+        _id: 1,
+        branches: { $arrayToObject: "$branches" }
+      }
+    },
+    {
+      $addFields: {
+        merged: {
+          $mergeObjects: [
+            { _id: "$_id" },
+            "$branches"
+          ]
+        }
+      }
+    },
+    {
+      $replaceRoot: { newRoot: "$merged" }
+    },
+    { $sort: { "date": 1 } }
+  ]);
+
+  return NextResponse.json({ data: result, types, typesByBranch });
 }
