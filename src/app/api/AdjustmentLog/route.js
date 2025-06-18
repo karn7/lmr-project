@@ -1,5 +1,3 @@
-
-
 import { NextResponse } from "next/server";
 import { connectMongoDB } from "../../../../lib/mongodb";
 import AdjustmentLog from "../../../../models/adjustmentLog";
@@ -23,6 +21,11 @@ export async function GET(req) {
     if (currencyParam) {
       query.currency = currencyParam;
     }
+
+    // ลบ Log ที่เก่ากว่า 5 วัน
+    const fiveDaysAgo = new Date();
+    fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+    await AdjustmentLog.deleteMany({ createdAt: { $lt: fiveDaysAgo } });
 
     const logs = await AdjustmentLog.find(query).sort({ createdAt: -1 });
 

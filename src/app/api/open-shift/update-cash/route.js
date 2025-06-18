@@ -50,6 +50,41 @@ export async function POST(req) {
     await shift.save();
 
     // Log การปรับยอดเงินสดลง MongoDB
+    // Log สำหรับ THB
+    if (totalTHB !== undefined) {
+      const before = parseFloat(shift.cashBalance?.THB) || 0;
+      const after = before + sign * parseFloat(totalTHB);
+      await AdjustmentLog.create({
+        createdAt: new Date(),
+        docNumber,
+        shiftNo,
+        employee,
+        action,
+        currency: "THB",
+        amount: parseFloat(totalTHB),
+        beforeAmount: before,
+        afterAmount: after
+      });
+    }
+
+    // Log สำหรับ LAK
+    if (totalLAK !== undefined) {
+      const before = parseFloat(shift.cashBalance?.LAK) || 0;
+      const after = before + sign * parseFloat(totalLAK);
+      await AdjustmentLog.create({
+        createdAt: new Date(),
+        docNumber,
+        shiftNo,
+        employee,
+        action,
+        currency: "LAK",
+        amount: parseFloat(totalLAK),
+        beforeAmount: before,
+        afterAmount: after
+      });
+    }
+
+    // Log สำหรับสกุลอื่น ๆ (ถ้ามี)
     await AdjustmentLog.create({
       createdAt: new Date(),
       docNumber,
