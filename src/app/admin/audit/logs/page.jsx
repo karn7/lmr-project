@@ -3,10 +3,10 @@
 "use client";
 
 import React from "react";
-import AdminNav from "../../../components/AdminNav";
-import AdminLayout from "../../../components/AdminLayout";
-import Container from "../../../components/Container";
-import Footer from "../../../components/Footer";
+import AdminNav from "../../components/AdminNav";
+import AdminLayout from "../../components/AdminLayout";
+import Container from "../../components/Container";
+import Footer from "../../components/Footer";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 
