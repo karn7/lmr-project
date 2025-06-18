@@ -111,23 +111,33 @@ function LogsPage() {
                 {filteredLogs.length === 0 ? (
                   <tr><td colSpan="7" className="text-center p-4">ไม่พบข้อมูล</td></tr>
                 ) : (
-                  filteredLogs.map((log, index) => (
-                    <tr
-                      key={index}
-                      onClick={() => window.open(`/admin/report/daily/dailylist/${log.docNumber}`, "_blank")}
-                      className="cursor-pointer hover:bg-gray-100"
-                    >
-                      <td className="p-2 border">{new Date(log.createdAt).toLocaleTimeString()}</td>
-                      <td className={`p-2 border ${log.action === "increase" ? "text-green-600" : "text-red-600"}`}>
-                        {log.action}
-                      </td>
-                      <td className="p-2 border">{log.currency}</td>
-                      <td className="p-2 border">{log.amount.toLocaleString()}</td>
-                      <td className="p-2 border">{log.beforeAmount.toLocaleString()}</td>
-                      <td className="p-2 border">{log.afterAmount.toLocaleString()}</td>
-                      <td className="p-2 border">{log.employee}</td>
-                    </tr>
-                  ))
+                  (() => {
+                    const groupColorMap = {};
+                    let colorToggle = false;
+                    return filteredLogs.map((log, index) => {
+                      if (!(log.docNumber in groupColorMap)) {
+                        groupColorMap[log.docNumber] = colorToggle ? "bg-gray-50" : "bg-white";
+                        colorToggle = !colorToggle;
+                      }
+                      return (
+                        <tr
+                          key={index}
+                          onClick={() => window.open(`/admin/report/daily/dailylist/${log.docNumber}`, "_blank")}
+                          className={`cursor-pointer hover:bg-gray-100 ${groupColorMap[log.docNumber]}`}
+                        >
+                          <td className="p-2 border">{new Date(log.createdAt).toLocaleTimeString()}</td>
+                          <td className={`p-2 border ${log.action === "increase" ? "text-green-600" : "text-red-600"}`}>
+                            {log.action}
+                          </td>
+                          <td className="p-2 border">{log.currency}</td>
+                          <td className="p-2 border">{log.amount.toLocaleString()}</td>
+                          <td className="p-2 border">{log.beforeAmount.toLocaleString()}</td>
+                          <td className="p-2 border">{log.afterAmount.toLocaleString()}</td>
+                          <td className="p-2 border">{log.employee}</td>
+                        </tr>
+                      );
+                    });
+                  })()
                 )}
               </tbody>
             </table>

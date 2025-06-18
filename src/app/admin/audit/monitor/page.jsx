@@ -121,7 +121,7 @@ export default function MonitorPage() {
       {activeTab === "overview" && (
         <div className="space-y-4">
           {/* ยอดเงินสดคงเหลือ */}
-          <div className="bg-[#1f2937] rounded-lg p-4 shadow text-white text-center h-[25vh] overflow-y-auto">
+          <div className="bg-[#1f2937] rounded-lg p-4 shadow text-white text-center h-[30vh] overflow-y-auto">
             <h2 className="text-xs font-bold mb-4">ยอดรวมเงินวันนี้ (รวมทุกสาขา)</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-2 text-sm">
               {Object.entries(totalBalance || {}).map(([currency, amount]) => {
