@@ -4,6 +4,7 @@ import Link from 'next/link';
 function SideNav({ collapsed }) {
   const [showReportSubMenu, setShowReportSubMenu] = useState(false);
   const [showStockSubMenu, setShowStockSubMenu] = useState(false);
+  const [showAuditSubMenu, setShowAuditSubMenu] = useState(false);
 
   return (
     <nav className='shadow-lg p-10 rounded-lg'>
@@ -116,6 +117,49 @@ function SideNav({ collapsed }) {
                 >
                   <span>📝</span>
                   {!collapsed && <span>บันทึกย้อนหลัง</span>}
+                </Link>
+              </li>
+            </ul>
+          )}
+        </li>
+        <li>
+          <button
+            className="flex items-center gap-3 w-full text-left my-3 p-3 rounded-lg hover:bg-gray-100"
+            onClick={() => setShowAuditSubMenu(!showAuditSubMenu)}
+          >
+            <span>📁</span>
+            {!collapsed && <span>Audit</span>}
+            {!collapsed && (
+              <span className="ml-auto">{showAuditSubMenu ? '▲' : '▼'}</span>
+            )}
+          </button>
+          {showAuditSubMenu && (
+            <ul className="ml-8 text-sm text-gray-700">
+              <li>
+                <Link
+                  href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/audit/system-check`}
+                  className="flex items-center gap-3 my-2 p-2 rounded-lg hover:bg-gray-100"
+                >
+                  <span>📁</span>
+                  {!collapsed && <span>System Check</span>}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/audit/logs`}
+                  className="flex items-center gap-3 my-2 p-2 rounded-lg hover:bg-gray-100"
+                >
+                  <span>📜</span>
+                  {!collapsed && <span>Logs</span>}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/audit/monitor`}
+                  className="flex items-center gap-3 my-2 p-2 rounded-lg hover:bg-gray-100"
+                >
+                  <span>🖥️</span>
+                  {!collapsed && <span>Monitor</span>}
                 </Link>
               </li>
             </ul>

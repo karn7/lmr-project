@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import Shift from "../../../../../models/shift";
+import AdjustmentLog from "../../../../../models/adjustmentLog";
 import { connectMongoDB } from "../../../../../lib/mongodb";
+import mongoose from "mongoose";
 
 export async function POST(req) {
   try {
     await connectMongoDB();
 
     const { docNumber, totalTHB, totalLAK, currency, amount, action, shiftNo, employee } = await req.json();
-    console.log("📥 รับข้อมูล:", { docNumber, totalTHB, totalLAK, currency, amount, action, shiftNo, employee });
 
     const today = new Date().toISOString().slice(0, 10); // yyyy-mm-dd
 
@@ -22,7 +23,6 @@ export async function POST(req) {
       return NextResponse.json({ message: "No open shift found" }, { status: 404 });
     }
 
-    console.log("💵 ก่อนอัปเดต cashBalance:", shift.cashBalance);
 
     // อัปเดตยอดเงินใน cashBalance
     const updated = { ...shift.cashBalance };
@@ -44,11 +44,23 @@ export async function POST(req) {
       updated[currency] = (parseFloat(updated[currency]) || 0) + sign * parseFloat(amount);
     }
 
-    console.log("✅ cashBalance หลังอัปเดต:", updated);
 
     // บันทึกกลับ
     shift.cashBalance = updated;
     await shift.save();
+
+    // Log การปรับยอดเงินสดลง MongoDB
+    await AdjustmentLog.create({
+      createdAt: new Date(),
+      docNumber,
+      shiftNo,
+      employee,
+      action,
+      currency,
+      amount: parseFloat(amount),
+      beforeAmount: parseFloat(shift.cashBalance?.[currency]) || 0,
+      afterAmount: parseFloat(updated?.[currency]) || 0
+    });
 
     return NextResponse.json({ message: "Shift cash updated successfully" });
   } catch (error) {

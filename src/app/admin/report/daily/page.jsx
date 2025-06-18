@@ -219,8 +219,9 @@ function ReportPage() {
                     <button
                       className="text-blue-600"
                       onClick={() =>
-                        router.push(
-                          `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/report/daily/dailylist/${r.docNumber}`
+                        window.open(
+                          `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/report/daily/dailylist/${r.docNumber}`,
+                          "_blank"
                         )
                       }
                     >
@@ -250,9 +251,10 @@ function ReportPage() {
                           className="text-blue-600 underline text-sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            router.push(
-                              `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/report/daily/dailylist/${r.docNumber}`
-                            )
+                            window.open(
+                              `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/report/daily/dailylist/${r.docNumber}`,
+                              "_blank"
+                            );
                           }}
                         >
                           ดูรายละเอียด
