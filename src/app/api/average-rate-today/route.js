@@ -7,7 +7,6 @@ import Record from "../../../../models/record";
 export async function POST(req) {
   try {
     const { branch, date } = await req.json();
-    console.log("📨 ค่าที่ได้รับจาก client:", { branch, date });
 
     await connectMongoDB();
     console.log("✅ Connected to MongoDB");
@@ -23,8 +22,6 @@ export async function POST(req) {
       createdAt: { $gte: start, $lte: end },
     });
 
-    console.log("📄 จำนวน record ที่เจอ:", records.length);
-
     let targetRecords = records;
 
     // ถ้าไม่มี record วันนี้ ให้ไปดูของเมื่อวาน
@@ -39,8 +36,6 @@ export async function POST(req) {
         payType: "Buying",
         createdAt: { $gte: yesterdayStart, $lte: yesterdayEnd },
       });
-
-      console.log("📄 ดึงข้อมูลจากเมื่อวานแทน จำนวน:", targetRecords.length);
     }
 
     const rateMap = {};
@@ -59,8 +54,6 @@ export async function POST(req) {
       currency,
       averageRate: count > 0 ? parseFloat((total / count).toFixed(4)) : 0,
     }));
-
-    console.log("📤 ส่ง averageRate:", result);
 
     return NextResponse.json({ data: result });
   } catch (err) {

@@ -8,7 +8,6 @@ export async function POST(req) {
     console.log("✅ Connected to MongoDB for cash drawer entry");
 
     const body = await req.json();
-    console.log("💡 Received data:", body);
 
     const { type, currency, amount, reason, user, date, shiftNo, branch } = body;
 
@@ -31,7 +30,7 @@ export async function POST(req) {
       createdAt: new Date()
     });
 
-    console.log("📝 Saving cash drawer entry:", entry);
+
     await entry.save();
 
     return NextResponse.json({ message: "Cash drawer entry recorded", id: entry._id });

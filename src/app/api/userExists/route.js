@@ -9,7 +9,6 @@ export async function POST(req) {
         const user = await User.findOne({
             $or: [{ email }, { employeeCode }]
         }).select("_id");
-        console.log("Matched User by email or employeeCode:", user)
 
         return NextResponse.json({ user })
 

@@ -13,19 +13,8 @@ export async function POST(req) {
       ...recordData
     } = await req.json();
     
-    console.log("📥 Incoming record data:", {
-      ...recordData,
-      employeeCode
-    });
-
     const prefix = recordData.payType === "Selling" ? "S" : recordData.payType === "Buying" ? "B" : "A";
     const docNumber = await generateDocNumber(prefix, recordData.employee, employeeCode);
-
-    console.log("🧾 Final data to save (without employeeCode):", {
-      ...recordData,
-      docNumber,
-      createdAt: new Date()
-    });
 
     const newRecord = new Record({
       ...recordData,

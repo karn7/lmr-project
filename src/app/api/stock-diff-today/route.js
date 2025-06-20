@@ -5,7 +5,6 @@ import Record from "../../../../models/record";
 export async function POST(req) {
   try {
     const { branch, date } = await req.json();
-    console.log("📨 ค่าที่ได้รับจาก client:", { branch, date });
     await connectMongoDB();
 
     const start = new Date(date);
@@ -16,9 +15,6 @@ export async function POST(req) {
       branch,
       createdAt: { $gte: start, $lt: end },
     });
-
-    console.log("📄 จำนวน record ที่เจอ:", records.length);
-    console.log("📄 ตัวอย่าง record:", records[0]);
 
     const result = {};
 
@@ -45,8 +41,6 @@ export async function POST(req) {
       currency,
       inOutTotal,
     }));
-
-    console.log("📤 ส่งข้อมูลกลับ:", formatted);
     return NextResponse.json({ data: formatted }, { status: 200 });
   } catch (err) {
     console.error("❌ Error in stock-diff-today:", err);

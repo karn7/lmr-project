@@ -123,6 +123,24 @@ function ExchangePage() {
     }
   }, [selectedCurrency]);
 
+  // ตรวจสอบเงื่อนไขการโอนเงินเข้า บช.
+  useEffect(() => {
+    const thbTotal = records
+      .filter(r => r.currency === "THB")
+      .reduce((sum, r) => sum + r.total, 0);
+
+    const usdTotal = records
+      .filter(r => r.currency === "USD")
+      .reduce((sum, r) => sum + r.total, 0);
+
+    const allowTransfer = thbTotal >= 10000 || usdTotal >= 500;
+
+    if (receiveMethod === "transfer" && !allowTransfer) {
+      alert("ไม่สามารถเลือกโอนเข้าบัญชีได้ เว้นแต่ยอด THB ≥ 10,000 หรือ USD ≥ 500");
+      setReceiveMethod("cash");
+    }
+  }, [receiveMethod, records]);
+
   const handleSave = async () => {
     if (!navigator.onLine) {
       alert("ไม่สามารถบันทึกได้ เนื่องจากไม่มีการเชื่อมต่ออินเทอร์เน็ต");
@@ -309,9 +327,6 @@ function ExchangePage() {
               ເງິນລົດອັດຕາ (ມີຕຳໜິ ເງິນຫຼຽນ)
             </label>
           </div>
-          <div className="hidden">
-            <input type="hidden" value="cash" />
-          </div>
           {/* เพิ่มส่วนเลือกวิธีที่ลูกค้าจ่ายเงิน */}
           <div className="col-span-2">
             <div>ລູກຄ້າຈ່າຍເງິນເປັນ</div>
@@ -336,10 +351,34 @@ function ExchangePage() {
               ໂອນເຂົ້າບັນຊີ
             </label>
           </div>
-          <div></div>
-          <div className="hidden">
-            <input type="hidden" value="cash" />
+          <div className="col-span-2">
+            <div>ລູກຄ້າໄດ້ຮັບເງິນເປັນ</div>
+            <label>
+              <input
+                type="radio"
+                name="receivemethod"
+                value="cash"
+                checked={receiveMethod === "cash"}
+                onChange={() => setReceiveMethod("cash")}
+              />{" "}
+              ເງິນສົດ
+            </label>
+            <label className="ml-4">
+              <input
+                type="radio"
+                name="receivemethod"
+                value="transfer"
+                checked={receiveMethod === "transfer"}
+                disabled={
+                  records.filter(r => r.currency === "THB").reduce((sum, r) => sum + r.total, 0) < 10000 &&
+                  records.filter(r => r.currency === "USD").reduce((sum, r) => sum + r.total, 0) < 500
+                }
+                onChange={() => setReceiveMethod("transfer")}
+              />{" "}
+              ໂອນເຂົ້າບັນຊີ
+            </label>
           </div>
+          <div></div>
         </div>
         <div className="text-right bg-black text-green-400 px-6 py-4 text-4xl font-bold rounded shadow h-fit">
           ຍອດລວມ:{" "}
@@ -508,7 +547,7 @@ function ExchangePage() {
             <button
               onClick={handleSave}
               className="bg-green-600 text-white py-2 px-6 rounded text-lg"
-              disabled={isSaving}
+              disabled={isSaving || records.length === 0}
             >
               ບັນທຶກລາຍການ
             </button>

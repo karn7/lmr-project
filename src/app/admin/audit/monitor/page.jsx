@@ -212,16 +212,17 @@ export default function MonitorPage() {
     setTotalBalance(totalsByCurrency);
   }, [branchBalances]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchAllTodayBalances();
-      fetchRecentRecords();
-      fetchCashDrawerLogs();
-      fetchAdjustmentLogs();
-      fetchNotifications();
-    }, 20000);
-    return () => clearInterval(interval);
-  }, []);
+useEffect(() => {
+  const interval = setInterval(() => {
+    fetchAllTodayBalances();
+    fetchRecentRecords();
+    fetchCashDrawerLogs();
+    fetchAdjustmentLogs();
+    fetchNotifications();
+    fetchTodayBills(); // ✅ เพิ่มการอัปเดตจำนวนบิลวันนี้
+  }, 20000);
+  return () => clearInterval(interval);
+}, []);
 
   useEffect(() => {
     if (status === "loading") return; // รอให้ session โหลดเสร็จก่อน

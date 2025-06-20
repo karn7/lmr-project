@@ -539,8 +539,12 @@ function ExchangePage() {
           <div className="flex justify-end">
             <button
               onClick={handleSave}
-              disabled={isSaving}
-              className={`py-2 px-6 rounded text-lg ${isSaving ? "bg-gray-400 cursor-not-allowed" : "bg-green-600 text-white"}`}
+              disabled={isSaving || records.length === 0}
+              className={`py-2 px-6 rounded text-lg ${
+                isSaving || records.length === 0
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-green-600 text-white"
+              }`}
             >
               {isSaving ? "กำลังบันทึกข้อมูล..." : "บันทึกรายการ"}
             </button>

@@ -155,7 +155,7 @@ function WithdrawPage() {
         }
       ];
 
-      const totalAmount = parseFloat(amount || "0") + parseFloat(fee || "0");
+      const totalAmount = parseFloat(amount || "0");
 
       const payload = {
         employee: session?.user?.name || "",

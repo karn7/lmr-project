@@ -433,7 +433,7 @@ function ExchangePage() {
             <button
               onClick={handleSave}
               className="bg-green-600 text-white py-2 px-6 rounded text-lg"
-              disabled={isSaving}
+              disabled={isSaving || records.length === 0}
             >
               {isSaving ? "ກຳລັງບັນທຶກຂໍ້ມູນ..." : "ບັນທຶກລາຍການ"}
             </button>

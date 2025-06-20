@@ -13,30 +13,31 @@ function Navbar({ session }) {
   const [chatVisible, setChatVisible] = useState(false);
   const messageRef = useRef(null);
 
-  useEffect(() => {
-    const fetchChat = async () => {
-      const today = new Date().toISOString().split("T")[0];
-      const employee = session?.user?.name;
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/shiftchat?employee=${encodeURIComponent(employee)}`, {
-          cache: "no-store"
-        });
-        const data = await res.json();
-        if (data?.chats?.length > 0 && data.chats[0]?.messages?.length > 0) {
-          const sortedMessages = data.chats[0].messages.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 4);
-          setChatMessages(sortedMessages);
-          if (sortedMessages.length > 0) {
-            if (sortedMessages[0].sender !== session?.user?.name) {
-              setLatestMessage(sortedMessages[0].message);
-            } else {
-              setLatestMessage(null);
-            }
+  const fetchChat = async () => {
+    const today = new Date().toISOString().split("T")[0];
+    const employee = session?.user?.name;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/shiftchat?employee=${encodeURIComponent(employee)}`, {
+        cache: "no-store"
+      });
+      const data = await res.json();
+      if (data?.chats?.length > 0 && data.chats[0]?.messages?.length > 0) {
+        const sortedMessages = data.chats[0].messages.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 4);
+        setChatMessages(sortedMessages);
+        if (sortedMessages.length > 0) {
+          if (sortedMessages[0].sender !== session?.user?.name) {
+            setLatestMessage(sortedMessages[0].message);
+          } else {
+            setLatestMessage(null);
           }
         }
-      } catch (err) {
-        console.error("Error fetching shift chat:", err);
       }
-    };
+    } catch (err) {
+      console.error("Error fetching shift chat:", err);
+    }
+  };
+
+  useEffect(() => {
     if (session?.user?.branch && session?.user?.name) {
       fetchChat();
     }
@@ -59,7 +60,8 @@ function Navbar({ session }) {
           sender: session?.user?.name,
           date: new Date().toISOString().split("T")[0],
           createdBy: session?.user?.name,
-          message
+          message,
+          isFirstMessage: chatMessages.length === 0
         }),
       });
 
@@ -67,6 +69,7 @@ function Navbar({ session }) {
         alert("ส่งข้อความสำเร็จแล้ว");
         setChatVisible(false);
         setLatestMessage(null);
+        fetchChat(); // ⬅️ เพิ่มบรรทัดนี้เพื่อดึงข้อมูลใหม่
       } else {
         const error = await res.json();
         alert("ส่งข้อความไม่สำเร็จ: " + error.error);
@@ -171,7 +174,21 @@ function Navbar({ session }) {
             </button>
           </>
         ) : (
-          <div className="text-gray-500 text-sm text-center">ไม่มีรายการสนทนา</div>
+          <>
+            <div className="text-gray-500 text-sm text-center mb-3">ไม่มีรายการสนทนา</div>
+            <textarea
+              ref={messageRef}
+              rows="3"
+              className="w-full border p-2 rounded mb-3 text-sm"
+              placeholder="เริ่มต้นแชทของคุณที่นี่..."
+            />
+            <button
+              onClick={handleSendMessage}
+              className="w-full bg-green-600 text-white py-1 rounded hover:bg-green-700 text-sm"
+            >
+              เริ่มการสนทนา
+            </button>
+          </>
         )}
       </div>
     )}

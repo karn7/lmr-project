@@ -136,6 +136,16 @@ function WelcomePage() {
       return;
     }
 
+    // เตรียมหมายเหตุค่าธรรมเนียม
+    let feeNote = [];
+    if (feePaidTHB !== "0" && feePaidTHB !== "") feeNote.push(`จ่ายค่าธรรมเนียมด้วยเงินสดบาท ${feePaidTHB}`);
+    if (feePaidLAK !== "0" && feePaidLAK !== "") feeNote.push(`จ่ายค่าธรรมเนียมด้วยเงินสดกีบ ${feePaidLAK}`);
+    if (transferLAK !== "0" && transferLAK !== "") feeNote.push(`จ่ายค่าธรรมเนียมโดยโอนเข้ากีบ ${transferLAK}`);
+    if (deductAmount > 0) feeNote.push(`หักจากยอด ${deductAmount.toLocaleString()} ບາດ`);
+
+    const autoNote = feeNote.join(", ");
+    const fullNote = [note, autoNote].filter(Boolean).join(" / ");
+
     setIsSaving(true);
     try {
       const res = await fetch("/api/record", {
@@ -148,6 +158,13 @@ function WelcomePage() {
               rate: 0,
               amount: 0,
               total: parseFloat((amountTHB || "0").toString().replace(/,/g, ""))
+            },
+            {
+              currency: "THB",
+              unit: "Fee",
+              rate: 0,
+              amount: 0,
+              total: feeTHB
             }
           ],
           employee: session?.user?.name,
@@ -161,7 +178,7 @@ function WelcomePage() {
           receiveMethod: "",
           receiveMethodNote: "",
           total: parseFloat((amountTHB || "0").toString().replace(/,/g, "")),
-          note
+          note: fullNote
         })
       });
 
@@ -274,6 +291,33 @@ function WelcomePage() {
       setIsSaving(false);
     }
   };
+
+  // Auto-update note when fee fields or payment fields change
+  useEffect(() => {
+    let feeNote = [];
+    if (feePaidTHB !== "0" && feePaidTHB !== "") feeNote.push(`จ่ายค่าธรรมเนียมด้วยเงินสดบาท ${feePaidTHB}`);
+    if (feePaidLAK !== "0" && feePaidLAK !== "") feeNote.push(`จ่ายค่าธรรมเนียมด้วยเงินสดกีบ ${feePaidLAK}`);
+    if (transferLAK !== "0" && transferLAK !== "") feeNote.push(`จ่ายค่าธรรมเนียมโดยโอนเข้ากีบ ${transferLAK}`);
+    if (deductAmount > 0) feeNote.push(`หักจากยอด ${deductAmount.toLocaleString()} ບາດ`);
+
+    // เพิ่มข้อความหมายเหตุจากการจ่ายเงิน
+    if (paidTHB !== "0" && paidTHB !== "") feeNote.push(`จ่าย ${paidTHB} ບາດ`);
+    if (direction === "THAI-LAOS") {
+      const rawPaidTHB = parseFloat((paidTHB || "0").toString().replace(/,/g, ""));
+      const rawTotalAfterDeduct = parseFloat((totalAfterDeduct || "0").toString().replace(/,/g, ""));
+      const paidLAKValue = Math.round((rawTotalAfterDeduct - rawPaidTHB) * buyRate);
+      if (!isNaN(paidLAKValue) && paidLAKValue > 0) feeNote.push(`จ่าย ${paidLAKValue.toLocaleString()} ກີບ`);
+    } else if (direction === "LAOS-THAI") {
+      if (receivedTHB !== "0" && receivedTHB !== "") feeNote.push(`รับ ${receivedTHB} ບາດ`);
+      const rawReceivedTHB = parseFloat((receivedTHB || "0").toString().replace(/,/g, ""));
+      const rawTotal = parseFloat((amountTHB || "0").toString().replace(/,/g, ""));
+      const paidLAKValue = Math.round((rawTotal - rawReceivedTHB) * rateTHB);
+      if (!isNaN(paidLAKValue) && paidLAKValue > 0) feeNote.push(`รับ ${paidLAKValue.toLocaleString()} ກີບ`);
+    }
+
+    const autoNote = feeNote.join(", ");
+    setNote(autoNote);
+  }, [feePaidTHB, feePaidLAK, transferLAK, deductAmount, paidTHB, receivedTHB, direction, amountTHB, rateTHB, buyRate, totalAfterDeduct]);
 
   return (
     <Container>

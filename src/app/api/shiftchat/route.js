@@ -29,7 +29,7 @@ export async function POST(req) {
         createdBy,
         messages: [newMessage]
       });
-      console.log("Created new ShiftChat document:", chat);
+
     } else {
       chat.messages.push(newMessage);
     }

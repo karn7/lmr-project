@@ -8,7 +8,6 @@ export async function POST(req) {
 
     const { shiftNo, closeAmount, employee } = await req.json();
     const date = new Date().toISOString().slice(0, 10);
-    console.log("💾 รับจาก client:", { date, shiftNo, closeAmount, employee });
 
     const shift = await Shift.findOne({
       date,
@@ -16,7 +15,6 @@ export async function POST(req) {
       employee: employee?.trim(),
       closedAt: null,
     });
-    console.log("🔎 ค้นหา shift:", shift);
 
     if (!shift) {
       return NextResponse.json({ message: "No open shift found" }, { status: 404 });
@@ -25,9 +23,7 @@ export async function POST(req) {
     // อัปเดตยอดเงินปิดร้านและเวลาดำเนินการ
     shift.closeAmount = closeAmount;
     shift.closedAt = new Date();
-    console.log("📦 ก่อนบันทึก:", shift);
     await shift.save().catch((err) => console.error("❌ save error:", err));
-    console.log("✅ บันทึกสำเร็จ:", shift);
 
     return NextResponse.json({ message: "Shift closed successfully" });
   } catch (error) {
