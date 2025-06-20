@@ -56,16 +56,13 @@ export async function GET(req) {
     const date = searchParams.get("date");
     const shiftNo = parseInt(searchParams.get("shiftNo"));
 
-    if (!user || !date || isNaN(shiftNo)) {
-      return NextResponse.json({ message: "Missing or invalid parameters" }, { status: 400 });
+    if (user && date && !isNaN(shiftNo)) {
+      const entries = await CashDrawer.find({ user, date, shiftNo }).sort({ createdAt: -1 });
+      return NextResponse.json({ entries });
     }
 
-    const entries = await CashDrawer.find({
-      user,
-      date,
-      shiftNo,
-    }).sort({ createdAt: -1 });
-
+    // หากไม่ได้ส่ง user/date/shiftNo มาครบ ให้คืนรายการทั้งหมด (สำหรับใช้ในหน้า Monitor)
+    const entries = await CashDrawer.find().sort({ createdAt: -1 });
     return NextResponse.json({ entries });
   } catch (error) {
     console.error("❌ Error fetching cash drawer entries:", error);

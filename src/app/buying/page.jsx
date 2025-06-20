@@ -27,6 +27,7 @@ function ExchangePage() {
   const [note, setNote] = useState("");
   const [currentShift, setCurrentShift] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [originalRate, setOriginalRate] = useState("");
 
   const router = useRouter();
 
@@ -59,10 +60,26 @@ function ExchangePage() {
     setSelectedCurrency(currency);
     setSelectedUnit("");
     setRate("");
+    setOriginalRate("");
   };
 
-  const handleAddRecord = () => {
+  const handleAddRecord = async () => {
     if (!selectedCurrency || !rate || !amount) return;
+
+    if (rate && originalRate && parseFloat(rate) !== parseFloat(originalRate)) {
+      const employee = session?.user?.name || "";
+      const message = `พนักงาน ${employee} ปรับเปลี่ยนเรทจาก ${originalRate} เป็น ${rate} (${selectedCurrency?.title})`;
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/Notification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          docNumber,
+          employee,
+          message,
+          type: "specialAction",
+        }),
+      });
+    }
 
     const unitToUse = selectedUnit === "-" ? "" : selectedUnit;
     const total = parseFloat((parseFloat(rate) * parseFloat(amount)).toFixed(2));
@@ -77,6 +94,7 @@ function ExchangePage() {
     setSelectedUnit("");
     setRate("");
     setAmount("");
+    setOriginalRate("");
   };
 
   const handleDelete = (index) => {
@@ -418,6 +436,7 @@ function ExchangePage() {
                         onClick={() => {
                           setSelectedUnit(c.content);
                           setRate(c.buy);
+                          setOriginalRate(c.buy);
                           setTimeout(() => {
                             amountRef.current?.focus();
                           }, 0);

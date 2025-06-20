@@ -28,6 +28,12 @@ function WelcomePage() {
   const [sortKey, setSortKey] = useState(null);
   const [sortOrder, setSortOrder] = useState("asc");
 
+  const [activeRowIndex, setActiveRowIndex] = useState(null);
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedDocNumber, setSelectedDocNumber] = useState(null);
+  const [deleteReason, setDeleteReason] = useState("");
+
   const userEmail = session?.user?.email;
 
   const getPosts = async () => {
@@ -95,6 +101,41 @@ function WelcomePage() {
     } else {
       setSortKey(key);
       setSortOrder("asc");
+    }
+  };
+
+  const handleRequestDelete = async () => {
+    const employee = session?.user?.name;
+    const message = `พนักงาน ${employee} ขออนุมัติลบรายการ ${selectedDocNumber}`;
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/Notification`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          docNumber: selectedDocNumber,
+          employee,
+          message,
+          type: "deleteRequest",
+          details: {
+            reason: deleteReason,
+          },
+        }),
+      });
+
+      if (res.ok) {
+        alert("แจ้งขอลบเรียบร้อยแล้ว");
+      } else {
+        alert("เกิดข้อผิดพลาดในการแจ้งขอลบ");
+      }
+    } catch (error) {
+      console.error("Request delete error:", error);
+      alert("เกิดข้อผิดพลาด");
+    } finally {
+      setIsDeleteModalOpen(false);
+      setDeleteReason("");
     }
   };
 
@@ -166,40 +207,62 @@ function WelcomePage() {
                     <th className="border px-3 py-2 cursor-pointer" onClick={() => handleSort('payType')}>
                       ປະເພດ {sortKey === 'payType' && (sortOrder === 'asc' ? '▲' : '▼')}
                     </th>
-                    <th className="border px-3 py-2">ພິມ</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sortedRecords.map((record, index) => (
-                    <tr key={index} className={`text-center ${
-                      record.payType === "Buying" ? "text-green-600" :
-                      record.payType === "Selling" ? "text-orange-500" : "text-black"
-                    }`}>
-                      <td className="border px-3 py-1">{record.docNumber}</td>
-                      <td className="border px-3 py-1">
-                        {format(new Date(record.createdAt), "HH:mm:ss")}
-                      </td>
-                      <td className="border px-3 py-1">
-                        {Number(record.total).toLocaleString(undefined, {
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 0,
-                        })}
-                      </td>
-                      <td className="border px-3 py-1">{record.payType}</td>
-                      <td className="border px-3 py-1">
-                        <button
-                          onClick={() =>
-                            window.open(
-                              `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/printreceipt?docNumber=${record.docNumber}&total=${record.total}`,
-                              "_blank", "width=500,height=400"
-                            )
-                          }
-                          className="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700 text-sm"
-                        >
-                          Print
-                        </button>
-                      </td>
-                    </tr>
+                    <React.Fragment key={index}>
+                      <tr
+                        className={`text-center cursor-pointer ${
+                          record.payType === "Buying"
+                            ? "text-green-600"
+                            : record.payType === "Selling"
+                            ? "text-orange-500"
+                            : "text-black"
+                        }`}
+                        onClick={() => setActiveRowIndex(index === activeRowIndex ? null : index)}
+                      >
+                        <td className="border px-3 py-1">{record.docNumber}</td>
+                        <td className="border px-3 py-1">
+                          {format(new Date(record.createdAt), "HH:mm:ss")}
+                        </td>
+                        <td className="border px-3 py-1">
+                          {Number(record.total).toLocaleString(undefined, {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          })}
+                        </td>
+                        <td className="border px-3 py-1">{record.payType}</td>
+                      </tr>
+                      {activeRowIndex === index && (
+                        <tr>
+                          <td colSpan="4" className="border px-3 py-2 bg-gray-50 text-center">
+                            {/* Action buttons (no Edit) */}
+                            <button
+                              onClick={() =>
+                                window.open(
+                                  `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/printreceipt?docNumber=${record.docNumber}&total=${record.total}`,
+                                  "_blank",
+                                  "width=500,height=400"
+                                )
+                              }
+                              className="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700 text-sm"
+                            >
+                              Print
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedDocNumber(record.docNumber);
+                                setIsDeleteModalOpen(true);
+                              }}
+                              className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm ml-2"
+                            >
+                              ລຶບ
+                            </button>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
@@ -208,6 +271,34 @@ function WelcomePage() {
         </div>
       </div>
       <Footer />
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded shadow-md w-full max-w-sm">
+            <h2 className="text-lg font-semibold mb-4">ກະລຸນາໃສ່ເຫດຜົນໃນການລຶບ</h2>
+            <textarea
+              className="w-full border rounded p-2 mb-4"
+              rows={3}
+              placeholder="ເຫດຜົນ..."
+              value={deleteReason}
+              onChange={(e) => setDeleteReason(e.target.value)}
+            ></textarea>
+            <div className="flex justify-end gap-3">
+              <button
+                className="bg-gray-300 hover:bg-gray-400 text-black px-3 py-1 rounded"
+                onClick={() => setIsDeleteModalOpen(false)}
+              >
+                ຍົກເລີກ
+              </button>
+              <button
+                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
+                onClick={handleRequestDelete}
+              >
+                ຢືນຢັນຂອລຶບ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Container>
   );
 }

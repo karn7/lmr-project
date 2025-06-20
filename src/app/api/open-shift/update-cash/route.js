@@ -40,14 +40,33 @@ export async function POST(req) {
       updated.LAK = (parseFloat(updated.LAK) || 0) + sign * parseFloat(totalLAK);
     }
 
+    let beforeAmountOther = 0;
     if (currency && amount !== undefined) {
+      beforeAmountOther = parseFloat(shift.cashBalance?.[currency]) || 0;
       updated[currency] = (parseFloat(updated[currency]) || 0) + sign * parseFloat(amount);
     }
 
 
     // บันทึกกลับ
     shift.cashBalance = updated;
-    await shift.save();
+    const saveResult = await shift.save();
+
+    if (!saveResult || !saveResult._id) {
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/Notification`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          docNumber,
+          employee,
+          message: `❗เกิดข้อผิดพลาดในการบันทึกยอดเงินสดของ shift: ${docNumber}`,
+          type: "systemError",
+        }),
+      });
+
+      return NextResponse.json({ message: "บันทึกยอดเงินสดไม่สำเร็จ" }, { status: 500 });
+    }
 
     // Log การปรับยอดเงินสดลง MongoDB
     // Log สำหรับ THB
@@ -85,17 +104,19 @@ export async function POST(req) {
     }
 
     // Log สำหรับสกุลอื่น ๆ (ถ้ามี)
-    await AdjustmentLog.create({
-      createdAt: new Date(),
-      docNumber,
-      shiftNo,
-      employee,
-      action,
-      currency,
-      amount: parseFloat(amount),
-      beforeAmount: parseFloat(shift.cashBalance?.[currency]) || 0,
-      afterAmount: parseFloat(updated?.[currency]) || 0
-    });
+    if (currency && amount !== undefined) {
+      await AdjustmentLog.create({
+        createdAt: new Date(),
+        docNumber,
+        shiftNo,
+        employee,
+        action,
+        currency,
+        amount: parseFloat(amount),
+        beforeAmount: beforeAmountOther,
+        afterAmount: parseFloat(updated?.[currency]) || 0
+      });
+    }
 
     return NextResponse.json({ message: "Shift cash updated successfully" });
   } catch (error) {

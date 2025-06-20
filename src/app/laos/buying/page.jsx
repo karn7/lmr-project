@@ -158,6 +158,20 @@ function ExchangePage() {
         }),
       });
 
+      // Add: Notify if payType is Unusable
+      if (payType === "Unusable") {
+        await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/Notification`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            docNumber,
+            employee: session?.user?.name || "",
+            message: `พนักงาน ${session?.user?.name} ทำรายการประเภท Unusable (${docNumber})`,
+            type: "specialAction",
+          }),
+        });
+      }
+
       if (res.ok) {
         const { docNumber } = await res.json();
 
