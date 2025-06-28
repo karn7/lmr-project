@@ -11,8 +11,25 @@ export default function Page({ params }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editableRecord, setEditableRecord] = useState(null);
+  const [docLogData, setDocLogData] = useState([]);
   const router = useRouter();
   const cashUpdated = useRef(false);
+  // --- Fetch adjustment log by docNumber ---
+  useEffect(() => {
+    if (!record?.docNumber) return;
+
+    const fetchDocLogs = async () => {
+      try {
+        const res = await fetch(`/api/AdjustmentLog?docNumber=${record.docNumber}`);
+        const data = await res.json();
+        setDocLogData(data.logs || []);
+      } catch (err) {
+        console.error("❌ Error loading docNumber logs:", err);
+      }
+    };
+
+    fetchDocLogs();
+  }, [record?.docNumber]);
 
   useEffect(() => {
     if (!docNumber) return;
@@ -403,6 +420,8 @@ export default function Page({ params }) {
         _id: updatedRecord._id,
         docNumber: updatedRecord.docNumber,
         payType: updatedRecord.payType,
+        payMethod: updatedRecord.payMethod,
+        receiveMethod: updatedRecord.receiveMethod,
         createdAt: updatedRecord.createdAt,
         items: updatedRecord.items,
         total: updatedRecord.total,
@@ -574,8 +593,40 @@ export default function Page({ params }) {
         <p><strong>พนักงาน:</strong> {record.employee}</p>
         <p><strong>กะ:</strong> {record.shiftNo}</p>
         <p><strong>ชื่อลูกค้า:</strong> {record.customerName}</p>
-        <p><strong>ลูกค้าจ่ายเงินเป็น:</strong> {record.payMethod}</p>
-        <p><strong>ลูกค้ารับเงินเป็น:</strong> {record.receiveMethod}</p>
+        <p>
+          <strong>ลูกค้าจ่ายเงินเป็น:</strong>{" "}
+          {isEditing ? (
+            <select
+              value={editableRecord.payMethod}
+              onChange={e =>
+                setEditableRecord({ ...editableRecord, payMethod: e.target.value })
+              }
+              className="border rounded px-2 py-1"
+            >
+              <option value="cash">cash</option>
+              <option value="transfer">transfer</option>
+            </select>
+          ) : (
+            record.payMethod
+          )}
+        </p>
+        <p>
+          <strong>ลูกค้ารับเงินเป็น:</strong>{" "}
+          {isEditing ? (
+            <select
+              value={editableRecord.receiveMethod}
+              onChange={e =>
+                setEditableRecord({ ...editableRecord, receiveMethod: e.target.value })
+              }
+              className="border rounded px-2 py-1"
+            >
+              <option value="cash">cash</option>
+              <option value="transfer">transfer</option>
+            </select>
+          ) : (
+            record.receiveMethod
+          )}
+        </p>
       </div>
 
       <div className="mt-6 bg-yellow-100 text-yellow-900 text-lg font-bold p-4 rounded-md shadow-md max-w-max">
@@ -784,6 +835,48 @@ export default function Page({ params }) {
             ยกเลิก
           </button>
         </div>
+      )}
+
+      {/* ตาราง adjustment log ตาม docNumber */}
+      {!isEditing && docLogData.length > 0 && (
+        <div className="mt-10">
+          <h2 className="text-xl font-semibold mb-2">การปรับยอดตาม DocNumber</h2>
+          <table className="min-w-full border border-gray-300 text-sm" cellPadding="5" cellSpacing="0">
+            <thead className="bg-gray-100 border-b">
+              <tr>
+                <th className="border px-3 py-2">เวลา</th>
+                <th className="border px-3 py-2">สกุลเงิน</th>
+                <th className="border px-3 py-2">จำนวน</th>
+                <th className="border px-3 py-2">ประเภท</th>
+                <th className="border px-3 py-2">พนักงาน</th>
+              </tr>
+            </thead>
+            <tbody>
+              {docLogData.map((log, index) => (
+                <tr
+                  key={index}
+                  className={`even:bg-gray-50 ${
+                    log.action === "increase"
+                      ? "bg-green-100"
+                      : log.action === "decrease"
+                      ? "bg-red-100"
+                      : ""
+                  }`}
+                >
+                  <td className="border px-3 py-1">{new Date(log.createdAt).toLocaleTimeString("th-TH")}</td>
+                  <td className="border px-3 py-1">{log.currency}</td>
+                  <td className="border px-3 py-1">{log.amount?.toLocaleString("th-TH")}</td>
+                  <td className="border px-3 py-1">{log.action}</td>
+                  <td className="border px-3 py-1">{log.employee}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {/* แสดงข้อความถ้าไม่มี log และไม่อยู่ในโหมดแก้ไข */}
+      {!isEditing && docLogData.length === 0 && (
+        <div className="mt-4 text-sm text-gray-500 italic">ไม่มี log ที่เกี่ยวข้องกับรายการนี้</div>
       )}
     </div>
   );

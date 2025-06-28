@@ -9,6 +9,7 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const dateParam = searchParams.get("date");
     const currencyParam = searchParams.get("currency");
+    const docNumberParam = searchParams.get("docNumber");
 
     const query = {};
     if (dateParam) {
@@ -20,6 +21,10 @@ export async function GET(req) {
 
     if (currencyParam) {
       query.currency = currencyParam;
+    }
+
+    if (docNumberParam) {
+      query.docNumber = docNumberParam;
     }
 
     // ลบ Log ที่เก่ากว่า 5 วัน

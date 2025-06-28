@@ -406,6 +406,19 @@ useEffect(() => {
                           <div><strong>รายละเอียด:</strong> {JSON.stringify(note.details || {}, null, 2)}</div>
                           <div><strong>เวลา:</strong> {new Date(note.createdAt).toLocaleTimeString("th-TH", { hour12: false })}</div>
                         </div>
+                        {note.docNumber && (
+                          <div className="mt-2 text-right">
+                            <button
+                              className="text-sm text-blue-400 hover:underline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(`/admin/report/daily/dailylist/${note.docNumber}`, "_blank");
+                              }}
+                            >
+                              ไปยังรายการ
+                            </button>
+                          </div>
+                        )}
                       </details>
                       {note.status !== "resolved" ? (
                         <div className="mt-2 flex justify-between items-center text-xs">
