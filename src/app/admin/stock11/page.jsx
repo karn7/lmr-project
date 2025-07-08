@@ -63,40 +63,39 @@ function AdminPage() {
       });
       const inOutJson = await inOutRes.json();
 
-      // เพิ่มการดึงค่า rate ของเมื่อวาน
-      const rateYesterdayRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/average-rate-today`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ branch: selectedBranch, date: yesterdayStr }),
-      });
-      const rateYesterdayJson = await rateYesterdayRes.json();
-      const rateYesterdayMap = new Map((rateYesterdayJson.data || []).map(item => [item.currency, item.averageRate]));
-
-      // ดึงค่า rate ของวันนี้
-      const rateTodayRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/average-rate-today`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ branch: selectedBranch, date: calculationDate }),
-      });
-      const rateTodayJson = await rateTodayRes.json();
-      const rateTodayMap = new Map((rateTodayJson.data || []).map(item => [item.currency, item.averageRate]));
+      // ดึง rateY และ rateT จาก summary API แค่ครั้งเดียว
+      const summaryRes = await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/dailystocks/summary?branch=${selectedBranch}&date=${calculationDate}`
+      );
+      const { items = [] } = await summaryRes.json();
+      const rateYMap = new Map(items.map(i => [i.currency, i.rateY]));
+      const rateTMap = new Map(items.map(i => [i.currency, i.rateT]));
 
       // map currencyTitles ทั้งหมด และรวมข้อมูล inOutJson.data + averageRate และยอดยกมาจาก carryMap
       const mergedStock = currencyTitles.map(({ title }) => {
         const inOutItem = (inOutJson.data || []).find((i) => i.currency === title);
         const carry = carryMap.get(title) ?? 0;
-        const inout = inOutItem?.inOutTotal ?? 0;
+        const buyTotal  = inOutItem?.buyTotal  ?? 0;
+        const sellTotal = inOutItem?.sellTotal ?? 0;
+        const inout     = inOutItem?.inOutTotal ?? 0;
 
-        const rateY = rateYesterdayMap.get(title) ?? 0;
-        const rateT = rateTodayMap.get(title) ?? 0;
+        const rateY = rateYMap.get(title) ?? 0;
+        const rateT = rateTMap.get(title) ?? 0;
+
+        const averageRate = (() => {
+          if (!rateY && rateT) return rateT;
+          if (!rateT && rateY) return rateY;
+          const totalAmount = carry + inout;
+          return totalAmount ? ((carry * rateY) + (inout * rateT)) / totalAmount : 0;
+        })();
 
         return {
           currency: title,
           carryOver: carry,
+          buyTotal,
+          sellTotal,
           inOutTotal: inout,
-          averageRate: inOutItem
-            ? (rateY && rateT ? (rateY + rateT) / 2 : rateY || rateT)
-            : rateY || 0
+          averageRate,
         };
       });
       setCalculatedStock(mergedStock);
@@ -275,6 +274,8 @@ function AdminPage() {
                       <tr>
                         <th className="border px-4 py-2">สกุลเงิน</th>
                         <th className="border px-4 py-2">ยอดยกมา</th>
+                        <th className="border px-4 py-2">ยอดซื้อ</th>
+                        <th className="border px-4 py-2">ยอดขาย</th>
                         <th className="border px-4 py-2">เข้า/ออกวันนี้</th>
                         <th className="border px-4 py-2">รวมทั้งหมด</th>
                         <th className="border px-4 py-2">เรทเฉลี่ย</th>
@@ -288,10 +289,17 @@ function AdminPage() {
                             {stockMap.get(post.title)?.carryOver ?? 0}
                           </td>
                           <td className="border px-4 py-2">
+                            {stockMap.get(post.title)?.buyTotal ?? 0}
+                          </td>
+                          <td className="border px-4 py-2">
+                            {stockMap.get(post.title)?.sellTotal ?? 0}
+                          </td>
+                          <td className="border px-4 py-2">
                             {stockMap.get(post.title)?.inOutTotal ?? 0}
                           </td>
                           <td className="border px-4 py-2">
-                            {(stockMap.get(post.title)?.carryOver ?? 0) + (stockMap.get(post.title)?.inOutTotal ?? 0)}
+                            {(stockMap.get(post.title)?.carryOver ?? 0) +
+                             (stockMap.get(post.title)?.inOutTotal ?? 0)}
                           </td>
                           <td className="border px-4 py-2">
                             {stockMap.get(post.title)?.averageRate ?? 0}

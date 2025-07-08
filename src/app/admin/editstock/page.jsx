@@ -133,6 +133,32 @@ function EditStockPage() {
       >
         บันทึกการแก้ไข
       </button>
+      <button
+        className="mt-4 bg-red-500 text-white px-4 py-2 rounded ml-2"
+        onClick={async () => {
+          if (!confirm("⚠️ คุณแน่ใจว่าต้องการลบสต๊อกของวันนี้หรือไม่?")) return;
+          try {
+            const res = await fetch("/api/dailystocks/delete", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ date: selectedDate, branch }),
+            });
+            const result = await res.json();
+            if (result.success) {
+              alert("🗑️ ลบสต๊อกสำเร็จ");
+              setEditableData([]);
+              setStockData([]);
+            } else {
+              alert("❌ ลบสต๊อกล้มเหลว: " + result.message);
+            }
+          } catch (err) {
+            console.error("เกิดข้อผิดพลาด:", err);
+            alert("❌ ลบสต๊อกล้มเหลว");
+          }
+        }}
+      >
+        ลบสต๊อก
+      </button>
     </div>
   );
 }

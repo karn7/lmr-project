@@ -11,12 +11,13 @@ export async function POST(req) {
     const end = new Date(date);
     end.setDate(end.getDate() + 1);
 
+    // result[currency] = { buy: number, sell: number }
+    const result = {};
+
     const records = await Record.find({
       branch,
       createdAt: { $gte: start, $lt: end },
     });
-
-    const result = {};
 
     for (const record of records) {
       const { items = [], payType } = record;
@@ -26,20 +27,22 @@ export async function POST(req) {
         if (!currency) continue;
 
         if (!result[currency]) {
-          result[currency] = 0;
+          result[currency] = { buy: 0, sell: 0 };
         }
 
         if (payType === "Buying") {
-          result[currency] += parseFloat(amount);
+          result[currency].buy += parseFloat(amount);
         } else if (payType === "Selling" || payType === "Wholesale") {
-          result[currency] -= parseFloat(amount);
+          result[currency].sell += parseFloat(amount);
         }
       }
     }
 
-    const formatted = Object.entries(result).map(([currency, inOutTotal]) => ({
+    const formatted = Object.entries(result).map(([currency, { buy, sell }]) => ({
       currency,
-      inOutTotal,
+      buyTotal: buy,
+      sellTotal: sell,
+      inOutTotal: buy - sell,
     }));
     return NextResponse.json({ data: formatted }, { status: 200 });
   } catch (err) {
