@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
-export default function LotteryReportPage() {
+function LotteryReportInner() {
   const router = useRouter();
   const params = useSearchParams();
   const [branch, setBranch] = useState(params.get("branch") || "");
@@ -203,5 +203,13 @@ export default function LotteryReportPage() {
         </tbody>
       </table>
     </div>
+  );
+}
+
+export default function LotteryReportPage() {
+  return (
+    <Suspense fallback={<div className="p-6">กำลังโหลด...</div>}>
+      <LotteryReportInner />
+    </Suspense>
   );
 }

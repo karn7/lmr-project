@@ -1,10 +1,10 @@
 
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
-export default function DepositReportPage() {
+function DepositReportInner() {
   const router = useRouter();
   const params = useSearchParams();
 
@@ -159,5 +159,13 @@ export default function DepositReportPage() {
         </tbody>
       </table>
     </div>
+  );
+}
+
+export default function DepositReportPage() {
+  return (
+    <Suspense fallback={<div className="p-6">กำลังโหลด...</div>}>
+      <DepositReportInner />
+    </Suspense>
   );
 }
