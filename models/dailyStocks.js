@@ -42,6 +42,7 @@ const dailyStockSchema = new mongoose.Schema(
         },
       }
     ],
+    createdAt: { type: Date, default: Date.now, expires: '90d' },
     createdBy: {
       type: String,
       default: null,

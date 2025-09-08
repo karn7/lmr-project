@@ -50,6 +50,7 @@ export async function GET(req) {
           total: item.total,
           employee: item.employee,
           payType: rec.payType,
+          branch: rec.branch,
         });
       });
     });

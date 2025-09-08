@@ -235,7 +235,8 @@ export default function Page({ params }) {
     "Wechat",
     "Lottery",
     "deposit",
-    "withdraw"
+    "withdraw",
+    "Wholesale"
   ];
 
   const handleDelete = async () => {
@@ -417,15 +418,16 @@ export default function Page({ params }) {
       const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
       // Compose payload
       const payload = {
-        _id: updatedRecord._id,
-        docNumber: updatedRecord.docNumber,
-        payType: updatedRecord.payType,
-        payMethod: updatedRecord.payMethod,
-        receiveMethod: updatedRecord.receiveMethod,
-        createdAt: updatedRecord.createdAt,
-        items: updatedRecord.items,
-        total: updatedRecord.total,
-      };
+  _id: updatedRecord._id,
+  docNumber: updatedRecord.docNumber,
+  payType: updatedRecord.payType,
+  payMethod: updatedRecord.payMethod,
+  receiveMethod: updatedRecord.receiveMethod,
+  createdAt: updatedRecord.createdAt,
+  customerName: updatedRecord.customerName,
+  items: updatedRecord.items,
+  total: updatedRecord.total,
+};
       console.log("📤 payload ที่จะส่ง:", payload);
       const res = await fetch(`${base}/api/record/update`, {
         method: "POST",
@@ -592,7 +594,22 @@ export default function Page({ params }) {
         </p>
         <p><strong>พนักงาน:</strong> {record.employee}</p>
         <p><strong>กะ:</strong> {record.shiftNo}</p>
-        <p><strong>ชื่อลูกค้า:</strong> {record.customerName}</p>
+        <p>
+  <strong>ชื่อลูกค้า:</strong>{" "}
+  {isEditing ? (
+    <input
+      type="text"
+      value={editableRecord?.customerName ?? ""}
+      onChange={e =>
+        setEditableRecord({ ...editableRecord, customerName: e.target.value })
+      }
+      className="border rounded px-2 py-1"
+      style={{ minWidth: 160 }}
+    />
+  ) : (
+    record.customerName
+  )}
+</p>
         <p>
           <strong>ลูกค้าจ่ายเงินเป็น:</strong>{" "}
           {isEditing ? (

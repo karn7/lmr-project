@@ -28,7 +28,7 @@ const recordSchema = new Schema({
       total: Number
     }
   ],
-  createdAt: Date
+  createdAt: { type: Date, default: Date.now, expires: '90d' }
 }, { timestamps: false });
 
 const Record = mongoose.models.Record || mongoose.model("Record", recordSchema);

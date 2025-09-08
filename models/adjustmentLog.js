@@ -1,7 +1,7 @@
 import mongoose, { Schema } from "mongoose";
 
 const adjustmentLogSchema = new mongoose.Schema({
-  createdAt: { type: Date, default: Date.now },
+  createdAt: { type: Date, default: Date.now, expires: '7d' },
   docNumber: String,
   shiftNo: String,
   employee: String,

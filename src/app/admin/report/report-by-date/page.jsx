@@ -12,7 +12,7 @@ export default function ReportByDate() {
   const [loading, setLoading] = useState(false);
   const [records, setRecords] = useState([]);
   const [selectedPayType, setSelectedPayType] = useState("Buying");
-  const [selectedBranch, setSelectedBranch] = useState("Asawann");
+  const selectedBranch = "Asawann";
 
   const fetchData = async () => {
     setLoading(true);
@@ -24,7 +24,11 @@ export default function ReportByDate() {
     }
 
     const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
-    const url = `${base}/api/items-by-date?start=${startDate}&end=${endDate}&payType=${selectedPayType}`;
+    const url =
+      selectedPayType === "Selling"
+        ? `${base}/api/items-by-date?start=${startDate}&end=${endDate}&branch=${selectedBranch}&payType=Selling,Wholesale`
+        : `${base}/api/items-by-date?start=${startDate}&end=${endDate}&branch=${selectedBranch}&payType=${selectedPayType}`;
+    console.log("🔍 Loading data for branch:", selectedBranch);
     const res = await fetch(url);
 
     if (!res.ok) {
@@ -34,7 +38,11 @@ export default function ReportByDate() {
     }
 
     const data = await res.json();
-    setRecords(data.records);
+    const filteredRecords = data.records.map(day => ({
+      ...day,
+      items: day.items.filter(item => item.branch === selectedBranch)
+    }));
+    setRecords(filteredRecords);
     setLoading(false);
   };
 
@@ -66,13 +74,18 @@ export default function ReportByDate() {
       );
     }
 
-    let y = 30;
-    records.forEach((day) => {
+    let grandTotalProfit = 0;
+    records.forEach((day, index) => {
+      if (index !== 0) {
+        doc.addPage();
+      }
+      let y = 30;
       doc.text(`Date: ${day.date}`, 14, y);
       const headers = selectedPayType === "Selling"
         ? ["Document", "Currency", "Amount", "Rate", "Total", "Cost Rate", "Cost Total", "Profit/Loss"]
         : ["Document", "Currency", "Amount", "Rate", "Total"];
 
+      let totalProfit = 0;
       const body = day.items.map((item) => {
         const base = [
           item.docNumber,
@@ -85,10 +98,11 @@ export default function ReportByDate() {
           const costRate = rateCache[day.date]?.[item.currency] ?? 0;
           const costTotal = item.amount * costRate;
           const profit = item.total - costTotal;
+          totalProfit += profit;
           base.push(
             formatNumber(costRate),
-            formatNumber(costTotal),
-            formatNumber(profit)
+            formatNumber(costTotal.toFixed(2)),
+            formatNumber(profit.toFixed(2))
           );
         }
         return base;
@@ -99,8 +113,23 @@ export default function ReportByDate() {
         head: [headers],
         body,
       });
-      y = doc.lastAutoTable.finalY + 10;
+      if (selectedPayType === "Selling") {
+        doc.setFontSize(10);
+        doc.text(`Total Profit/Loss: ${totalProfit.toFixed(2)}`, 200, doc.lastAutoTable.finalY + 6, { align: "right" });
+        doc.setFontSize(12);
+        y = doc.lastAutoTable.finalY + 14;
+        grandTotalProfit += totalProfit;
+      } else {
+        y = doc.lastAutoTable.finalY + 10;
+      }
     });
+
+    let finalY = doc.lastAutoTable?.finalY ?? 280;
+
+    if (selectedPayType === "Selling") {
+      doc.setFontSize(14);
+      doc.text(`Grand Total Profit/Loss: ${formatNumber(grandTotalProfit.toFixed(2))}`, 105, finalY + 10, { align: "center" });
+    }
     
     const filename = `${selectedPayType}-${startDate}_to_${endDate}.pdf`;
     doc.save(filename);
@@ -133,10 +162,6 @@ export default function ReportByDate() {
     <div className="p-6 max-w-3xl mx-auto space-y-4">
       <button onClick={() => window.history.back()} className="mb-4 bg-gray-300 px-4 py-2 rounded">ย้อนกลับ</button>
       <h1 className="text-2xl font-bold">รายงานตามช่วงเวลา</h1>
-      <select value={selectedBranch} onChange={(e) => setSelectedBranch(e.target.value)} className="border px-2 py-1 rounded mr-2">
-        <option value="Asawann">Asawann</option>
-        <option value="OtherBranch">OtherBranch</option>
-      </select>
       <div className="space-x-2">
         <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />

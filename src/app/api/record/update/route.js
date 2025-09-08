@@ -4,7 +4,7 @@ import Record from "../../../../../models/record";
 
 export async function POST(req) {
   try {
-    const { _id, docNumber, createdAt, payType, items, total, payMethod, receiveMethod } = await req.json();
+    const { _id, docNumber, createdAt, payType, items, total, payMethod, receiveMethod, customerName } = await req.json();
 
     await connectMongoDB();
 
@@ -24,7 +24,8 @@ export async function POST(req) {
           "payMethod": payMethod,
           "receiveMethod": receiveMethod,
           "items": items,
-          "total": total
+          "total": total,
+          "customerName": customerName
         }
       },
       { new: true }

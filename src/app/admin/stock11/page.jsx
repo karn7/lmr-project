@@ -286,23 +286,23 @@ function AdminPage() {
                         <tr key={index}>
                           <td className="border px-4 py-2">{post.title}</td>
                           <td className="border px-4 py-2">
-                            {stockMap.get(post.title)?.carryOver ?? 0}
+                            {(stockMap.get(post.title)?.carryOver ?? 0).toLocaleString()}
                           </td>
                           <td className="border px-4 py-2">
-                            {stockMap.get(post.title)?.buyTotal ?? 0}
+                            {(stockMap.get(post.title)?.buyTotal ?? 0).toLocaleString()}
                           </td>
                           <td className="border px-4 py-2">
-                            {stockMap.get(post.title)?.sellTotal ?? 0}
+                            {(stockMap.get(post.title)?.sellTotal ?? 0).toLocaleString()}
                           </td>
                           <td className="border px-4 py-2">
-                            {stockMap.get(post.title)?.inOutTotal ?? 0}
+                            {(stockMap.get(post.title)?.inOutTotal ?? 0).toLocaleString()}
                           </td>
                           <td className="border px-4 py-2">
-                            {(stockMap.get(post.title)?.carryOver ?? 0) +
-                             (stockMap.get(post.title)?.inOutTotal ?? 0)}
+                            {((stockMap.get(post.title)?.carryOver ?? 0) +
+                             (stockMap.get(post.title)?.inOutTotal ?? 0)).toLocaleString()}
                           </td>
                           <td className="border px-4 py-2">
-                            {stockMap.get(post.title)?.averageRate ?? 0}
+                            {(stockMap.get(post.title)?.averageRate ?? 0).toLocaleString()}
                           </td>
                         </tr>
                       ))}
