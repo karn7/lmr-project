@@ -9,6 +9,8 @@ function LotteryReportInner() {
   const [branch, setBranch] = useState(params.get("branch") || "");
   const [date, setDate] = useState(params.get("date") || new Date().toISOString().slice(0, 10));
   const [range, setRange] = useState(params.get("range") || "day"); // "day" | "month"
+  const [startDate, setStartDate] = useState(params.get("start") || new Date().toISOString().slice(0, 10));
+  const [endDate, setEndDate] = useState(params.get("end") || new Date().toISOString().slice(0, 10));
   const [branches, setBranches] = useState([]);
   const [data, setData] = useState({ summary: { count: 0, sumTotal: 0 }, rows: [], perCurrency: [] });
   const [loading, setLoading] = useState(false);
@@ -38,6 +40,10 @@ function LotteryReportInner() {
     if (branch) qs.set("branch", branch);
     if (date) qs.set("date", date);
     if (range) qs.set("range", range);
+    if (range === 'custom') {
+      if (startDate) qs.set('start', startDate);
+      if (endDate) qs.set('end', endDate);
+    }
     const url = `${base}/api/lottery?${qs.toString()}`;
     const res = await fetch(url, { cache: "no-store" });
     const json = await res.json();
@@ -52,9 +58,13 @@ function LotteryReportInner() {
     if (branch) qs.set("branch", branch);
     if (date) qs.set("date", date);
     if (range) qs.set("range", range);
+    if (range === 'custom') {
+      if (startDate) qs.set('start', startDate);
+      if (endDate) qs.set('end', endDate);
+    }
     router.replace(`/admin/report/lottery?${qs.toString()}`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [branch, date, range]);
+  }, [branch, date, range, startDate, endDate]);
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -90,11 +100,34 @@ function LotteryReportInner() {
             className="border rounded px-2 py-1"
           />
         </div>
+        {range === 'custom' && (
+          <>
+            <div>
+              <label className="block text-sm mb-1">เริ่มวันที่ (Start)</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="border rounded px-2 py-1"
+              />
+            </div>
+            <div>
+              <label className="block text-sm mb-1">ถึงวันที่ (End)</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="border rounded px-2 py-1"
+              />
+            </div>
+          </>
+        )}
         <div>
           <label className="block text-sm mb-1">ช่วง</label>
           <select value={range} onChange={(e) => setRange(e.target.value)} className="border rounded px-2 py-1">
             <option value="day">รายวัน (1 วัน)</option>
             <option value="month">รายเดือน (ทั้งเดือนของวันที่เลือก)</option>
+            <option value="custom">กำหนดช่วงเอง</option>
           </select>
         </div>
         <button
@@ -109,8 +142,10 @@ function LotteryReportInner() {
       {/* Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-white border rounded p-4">
-          <div className="text-gray-500 text-sm">จำนวนรายการ</div>
-          <div className="text-2xl font-bold">{data?.summary?.count ?? 0}</div>
+          <div className="text-gray-500 text-sm">ยอดรวม(ใบ)</div>
+          <div className="text-2xl font-bold">
+            {((data?.perCurrency ?? []).reduce((acc, r) => acc + (r?.amountSum ?? 0), 0)) || 0}
+          </div>
         </div>
         <div className="bg-white border rounded p-4">
           <div className="text-gray-500 text-sm">ผลรวมช่วงนี้</div>
@@ -130,13 +165,13 @@ function LotteryReportInner() {
       {/* Per-currency (optional) */}
       {Array.isArray(data?.perCurrency) && data.perCurrency.length > 0 && (
         <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-2">สรุปตามสกุลเงิน</h2>
+          <h2 className="text-lg font-semibold mb-2">สรุปตามรายการ</h2>
           <table className="min-w-full border">
             <thead className="bg-gray-100">
               <tr>
-                <th className="border px-3 py-2 text-left">Currency</th>
-                <th className="border px-3 py-2 text-right">Amount รวม</th>
-                <th className="border px-3 py-2 text-right">Total รวม</th>
+                <th className="border px-3 py-2 text-left">รางวัล</th>
+                <th className="border px-3 py-2 text-right">รวม (ใบ)</th>
+                <th className="border px-3 py-2 text-right">เป็นเงินรวม</th>
               </tr>
             </thead>
             <tbody>

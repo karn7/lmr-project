@@ -1,4 +1,6 @@
 
+
+export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { connectMongoDB } from "../../../../lib/mongodb";
 import Record from "../../../../models/record";
@@ -26,13 +28,28 @@ export async function GET(req) {
   const date = searchParams.get("date");       // YYYY-MM-DD
   const branch = searchParams.get("branch");   // optional
 
-  const { start, end, range: resolvedRange } = parseRange(range, date);
+  const employee = searchParams.get("employee");
+  const startParam = searchParams.get("start");
+  const endParam = searchParams.get("end");
+
+  let { start, end, range: resolvedRange } = parseRange(range, date);
+  if (startParam && endParam) {
+    const s = new Date(startParam);
+    s.setHours(0, 0, 0, 0);
+    const e = new Date(endParam);
+    e.setHours(0, 0, 0, 0);
+    e.setDate(e.getDate() + 1); // make end exclusive
+    start = s;
+    end = e;
+    resolvedRange = 'custom';
+  }
 
   const match = {
     payType: { $in: ["deposit", "Deposit"] },
     createdAt: { $gte: start, $lt: end },
   };
   if (branch && branch.trim()) match.branch = branch.trim();
+  if (employee && employee.trim()) match.employee = employee.trim();
 
   const pipeline = [
     { $match: match },
@@ -69,6 +86,7 @@ export async function GET(req) {
     ok: true,
     range: resolvedRange,
     branch: branch ?? "",
+    employee: employee ?? "",
     start,
     end,
     summary: result?.summary ?? { count: 0, sumTotal: 0 },

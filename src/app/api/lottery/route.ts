@@ -1,4 +1,5 @@
 // app/api/reports/lottery/route.ts
+export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { connectMongoDB } from "../../../../lib/mongodb";
 import Record from "../../../../models/record";
@@ -26,8 +27,20 @@ export async function GET(req: Request) {
   const range = searchParams.get("range"); // "day" | "month"
   const date = searchParams.get("date");   // "YYYY-MM-DD"
   const branch = searchParams.get("branch"); // optional exact match
+  const startParam = searchParams.get("start");
+  const endParam = searchParams.get("end");
 
-  const { start, end, range: resolvedRange } = parseRange(range, date);
+  let { start, end, range: resolvedRange } = parseRange(range, date);
+  if (startParam && endParam) {
+    const s = new Date(startParam);
+    s.setHours(0, 0, 0, 0);
+    const e = new Date(endParam);
+    e.setHours(0, 0, 0, 0);
+    e.setDate(e.getDate() + 1); // make end exclusive
+    start = s;
+    end = e;
+    resolvedRange = "custom";
+  }
 
   const match: any = {
     payType: "Lottery",

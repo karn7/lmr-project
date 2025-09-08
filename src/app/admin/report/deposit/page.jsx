@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, Suspense } from "react";
@@ -11,6 +10,8 @@ function DepositReportInner() {
   const [branch, setBranch] = useState(params.get("branch") || "");
   const [date, setDate] = useState(params.get("date") || new Date().toISOString().slice(0, 10));
   const [range, setRange] = useState(params.get("range") || "day"); // "day" | "month"
+  const [employee, setEmployee] = useState(params.get("employee") || "");
+  const [employees, setEmployees] = useState([]);
   const [branches, setBranches] = useState([]);
   const [data, setData] = useState({ summary: { count: 0, sumTotal: 0 }, byNote: [] });
   const [loading, setLoading] = useState(false);
@@ -22,9 +23,10 @@ function DepositReportInner() {
     async function loadBranches() {
       try {
         const res = await fetch(`${base}/api/branches`, { cache: "no-store" });
-        const list = await res.json();
-        const unique = Array.from(new Set(Array.isArray(list) ? list : [])).sort();
-        setBranches(unique);
+        const data = await res.json();
+        const uniqueBranches = Array.from(new Set(Array.isArray(data.branches) ? data.branches : [])).sort();
+        setBranches(uniqueBranches);
+        setEmployees(Array.isArray(data.employees) ? data.employees.sort() : []);
       } catch (e) {
         console.error("โหลดรายชื่อสาขาล้มเหลว", e);
       }
@@ -39,6 +41,7 @@ function DepositReportInner() {
     if (branch) qs.set("branch", branch);
     if (date) qs.set("date", date);
     if (range) qs.set("range", range);
+    if (employee) qs.set("employee", employee);
 
     const url = `${base}/api/deposit?${qs.toString()}`;
     const res = await fetch(url, { cache: "no-store" });
@@ -54,9 +57,10 @@ function DepositReportInner() {
     if (branch) qs.set("branch", branch);
     if (date) qs.set("date", date);
     if (range) qs.set("range", range);
+    if (employee) qs.set("employee", employee);
     router.replace(`/admin/report/deposit?${qs.toString()}`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [branch, date, range]);
+  }, [branch, date, range, employee]);
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -80,6 +84,20 @@ function DepositReportInner() {
             <option value="">ทั้งหมด</option>
             {branches.map((b, i) => (
               <option key={i} value={b}>{b}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm mb-1">พนักงาน (Employee)</label>
+          <select
+            value={employee}
+            onChange={(e) => setEmployee(e.target.value)}
+            className="border rounded px-2 py-1 min-w-[220px]"
+          >
+            <option value="">ทั้งหมด</option>
+            {employees.map((emp, i) => (
+              <option key={i} value={emp}>{emp}</option>
             ))}
           </select>
         </div>

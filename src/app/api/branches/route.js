@@ -6,5 +6,6 @@ import User from "../../../../models/user";
 export async function GET() {
   await connectMongoDB();
   const branches = await User.distinct("branch", { branch: { $ne: null } });
-  return NextResponse.json(branches);
+  const employees = await User.distinct("name", { name: { $ne: null } });
+  return NextResponse.json({ branches, employees });
 }
