@@ -189,6 +189,21 @@ function AdminPage() {
   // ฟังก์ชันบันทึกข้อมูลสต๊อกทีละรายการ
   const handleSaveStock = async () => {
     const calculationDate = selectedDateForDailyStock.start || today;
+
+    // ตรวจสอบสกุลเงินที่มียอดรวมเป็นลบก่อนบันทึก
+    const negatives = calculatedStock
+      .filter((stock) => (stock.carryOver ?? 0) + (stock.inOutTotal ?? 0) < 0)
+      .map((stock) => stock.currency);
+
+    if (negatives.length > 0) {
+      const msg = `มียอดรวมเป็นลบในสกุล: ${negatives.join(", ")}\nต้องการบันทึกข้อมูลหรือไม่?`;
+      const ok = window.confirm(msg);
+      if (!ok) {
+        // ผู้ใช้ยกเลิกการบันทึก
+        return;
+      }
+    }
+
     const payload = {
       date: calculationDate,
       branch: selectedBranch,
@@ -297,9 +312,18 @@ function AdminPage() {
                           <td className="border px-4 py-2">
                             {(stockMap.get(post.title)?.inOutTotal ?? 0).toLocaleString()}
                           </td>
-                          <td className="border px-4 py-2">
-                            {((stockMap.get(post.title)?.carryOver ?? 0) +
-                             (stockMap.get(post.title)?.inOutTotal ?? 0)).toLocaleString()}
+                          <td
+                            className={`border px-4 py-2 ${
+                              ((stockMap.get(post.title)?.carryOver ?? 0) +
+                                (stockMap.get(post.title)?.inOutTotal ?? 0)) < 0
+                                ? "text-red-600"
+                                : ""
+                            }`}
+                          >
+                            {(
+                              (stockMap.get(post.title)?.carryOver ?? 0) +
+                              (stockMap.get(post.title)?.inOutTotal ?? 0)
+                            ).toLocaleString()}
                           </td>
                           <td className="border px-4 py-2">
                             {(stockMap.get(post.title)?.averageRate ?? 0).toLocaleString()}
