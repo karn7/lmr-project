@@ -4,7 +4,8 @@ import React from "react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
+export default function ReceiptByDocNumberPage(props) {
+  const { docNumber } = props.params;
   const [record, setRecord] = useState(null);
   const router = useRouter();
 
