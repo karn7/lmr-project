@@ -16,7 +16,7 @@
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
     "mongoose": "^8.13.2",
-    "next": "14.1.2",
+    "next": "^15.5.7",
     "next-auth": "^4.24.11",
     "pdfkit": "^0.17.1",
     "react": "^18",
