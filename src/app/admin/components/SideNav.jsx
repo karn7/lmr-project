@@ -94,6 +94,15 @@ function SideNav({ collapsed }) {
     {!collapsed && <span>รายงาน Deposit</span>}
   </Link>
 </li>
+              <li>
+                <Link
+                  href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/report/bot-exchange`}
+                  className="flex items-center gap-3 my-2 p-2 rounded-lg hover:bg-gray-100"
+                >
+                  <span>🏦</span>
+                  {!collapsed && <span>รายงาน BOT Exchange</span>}
+                </Link>
+              </li>
             </ul>
           )}
         </li>

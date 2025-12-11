@@ -2,6 +2,7 @@ import mongoose, { Schema } from "mongoose";
 
 const recordSchema = new Schema({
   docNumber: String, // เช่น B680417001
+  customerId: String, // รหัสลูกค้าเชื่อมกับ customer collection (เช่น idNumber)
   customerName: String,
   employee: String,
   branch: String,
@@ -28,7 +29,7 @@ const recordSchema = new Schema({
       total: Number
     }
   ],
-  createdAt: { type: Date, default: Date.now, expires: '90d' }
+  createdAt: { type: Date, default: Date.now }
 }, { timestamps: false });
 
 const Record = mongoose.models.Record || mongoose.model("Record", recordSchema);
