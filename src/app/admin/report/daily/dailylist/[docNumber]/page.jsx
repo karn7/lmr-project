@@ -64,17 +64,63 @@ export default function Page({ params }) {
       console.log("⛔ updateCashOnDeleteOnly() ถูกบล็อก ไม่ให้ทำซ้ำ");
       return;
     }
-    if (!record || !record.payType || record.total == null || !record.docNumber) {
+
+    // ต้องมีข้อมูลกะ/เอกสารเพื่อปรับยอด
+    if (!record || !record.shiftNo || !record.docNumber) {
       console.warn("⚠️ ข้อมูลไม่ครบ ไม่สามารถอัปเดตเงินสดได้", record);
       return;
     }
-    console.log("🧾 record ที่จะใช้ในการอัปเดตเงิน:", record);
+
     cashUpdated.current = true;
-    console.log("✅ เรียก updateCashOnDeleteOnly");
 
     const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
+    // ✅ แนวทางใหม่: ใช้ Log การปรับยอด แล้วทำ “ตรงกันข้าม” ตอนลบ
+    // เช่น increase -> decrease, decrease -> increase
+    const invertAction = (action) => {
+      if (action === "increase") return "decrease";
+      if (action === "decrease") return "increase";
+      return action;
+    };
+
     try {
+      if (Array.isArray(docLogData) && docLogData.length > 0) {
+        console.log("🧾 ใช้ docLogData เพื่อย้อนกลับการปรับยอด:", docLogData);
+
+        for (const log of docLogData) {
+          // กันเคส log ไม่สมบูรณ์
+          if (!log?.currency || log?.amount == null || !log?.action) continue;
+
+          await fetch(`${base}/api/open-shift/update-cash`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              shiftNo: record.shiftNo,
+              docNumber: record.docNumber,
+              // ใช้ชื่อพนักงานในรายการ (หรือ user) เพื่อความสอดคล้องกับของเดิม
+              employee: record.employee || (record?.user?.name ?? ""),
+              date: record.date,
+              currency: log.currency,
+              amount: log.amount,
+              action: invertAction(log.action),
+            }),
+          });
+        }
+
+        return; // จบที่นี่ ไม่ต้องคำนวณจาก record แบบเดิม
+      }
+
+      // 🔁 Fallback: ถ้าไม่มี log ให้ใช้สูตรเดิม (กันระบบพังในรายการเก่า)
+      console.warn("⚠️ ไม่พบ docLogData สำหรับรายการนี้ — ใช้การคำนวณแบบเดิมแทน");
+
       let updates = [];
+
+      if (!record.payType || record.total == null) {
+        console.warn("⚠️ ข้อมูลไม่ครบ ไม่สามารถคำนวณ updates แบบเดิมได้", record);
+        return;
+      }
 
       if (record.payType === "Buying") {
         if (record.payMethod === "cash") {
@@ -178,7 +224,7 @@ export default function Page({ params }) {
         }
       }
 
-      console.log("📤 updates ที่จะส่งไป update-cash:", updates);
+      console.log("📤 updates ที่จะส่งไป update-cash (fallback):", updates);
 
       if (updates.length > 0) {
         for (const update of updates) {
@@ -192,12 +238,12 @@ export default function Page({ params }) {
               docNumber: record.docNumber,
               employee: record.employee || (record?.user?.name ?? ""),
               date: record.date,
-              ...update, // ส่งค่า currency, amount, action แบบแยกรายการ
+              ...update,
             }),
           });
         }
       } else {
-        console.warn("⚠️ ไม่พบข้อมูล update-cash ที่ต้องส่ง");
+        console.warn("⚠️ ไม่พบข้อมูล update-cash ที่ต้องส่ง (fallback)");
       }
     } catch (error) {
       console.error("❌ Failed to update cash:", error);
@@ -268,74 +314,126 @@ export default function Page({ params }) {
 
       if (dataCheck.open) {
         // Determine the effect on balances
-        if (record.payType === "Buying" || record.payType === "Selling") {
-          const isPayCash = record.payMethod === "cash";
-          const isReceiveCash = record.receiveMethod === "cash";
+        // ✅ แนวทางใหม่: แสดงสิ่งที่จะ “ย้อนกลับ” จาก Log การปรับยอด (ถ้ามี)
+        const invertAction = (action) => {
+          if (action === "increase") return "decrease";
+          if (action === "decrease") return "increase";
+          return action;
+        };
 
-          if (record.payType === "Buying") {
-            if (isPayCash) {
-              message += `- เงินสด (THB) จะเพิ่มขึ้น ${record.total.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+        if (Array.isArray(docLogData) && docLogData.length > 0) {
+          message += `- จะย้อนกลับการปรับยอดตาม Log (${docLogData.length} รายการ):\n`;
+          docLogData.forEach((log) => {
+            if (!log?.currency || log?.amount == null || !log?.action) return;
+            const opposite = invertAction(log.action);
+            message += `  * ${log.currency}: ${Number(log.amount).toLocaleString("th-TH", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })} (${opposite})\n`;
+          });
+        } else {
+          // 🔁 Fallback เดิม: ถ้าไม่มี log ให้แสดงตามการคำนวณจาก record
+          if (record.payType === "Buying" || record.payType === "Selling") {
+            const isPayCash = record.payMethod === "cash";
+            const isReceiveCash = record.receiveMethod === "cash";
+
+            if (record.payType === "Buying") {
+              if (isPayCash) {
+                message += `- เงินสด (THB) จะเพิ่มขึ้น ${record.total.toLocaleString("th-TH", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}\n`;
+              }
+              if (record.items && record.items.length > 0) {
+                message += `- สกุลเงินในรายการจะลดลง:\n`;
+                record.items.forEach((item) => {
+                  message += `  * ${item.currency}: ${item.amount.toLocaleString("th-TH", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}\n`;
+                });
+              }
+            } else if (record.payType === "Selling") {
+              if (isReceiveCash) {
+                message += `- เงินสด (THB) จะลดลง ${record.total.toLocaleString("th-TH", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}\n`;
+              }
+              if (record.items && record.items.length > 0) {
+                message += `- สกุลเงินในรายการจะเพิ่มขึ้น:\n`;
+                record.items.forEach((item) => {
+                  message += `  * ${item.currency}: ${item.amount.toLocaleString("th-TH", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}\n`;
+                });
+              }
+            }
+          } else if (record.payType === "NP(B)") {
+            if (record.payMethod === "cash") {
+              message += `- เงินสด (THB) จะเพิ่มขึ้น ${record.total.toLocaleString("th-TH", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}\n`;
             }
             if (record.items && record.items.length > 0) {
               message += `- สกุลเงินในรายการจะลดลง:\n`;
               record.items.forEach((item) => {
-                message += `  * ${item.currency}: ${item.amount.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+                message += `  * ${item.currency}: ${item.amount.toLocaleString("th-TH", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}\n`;
               });
             }
-          } else if (record.payType === "Selling") {
-            if (isReceiveCash) {
-              message += `- เงินสด (THB) จะลดลง ${record.total.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+          } else if (record.payType === "NP(S)") {
+            if (record.receiveMethod === "cash") {
+              message += `- เงินสด (THB) จะลดลง ${record.total.toLocaleString("th-TH", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}\n`;
             }
             if (record.items && record.items.length > 0) {
               message += `- สกุลเงินในรายการจะเพิ่มขึ้น:\n`;
               record.items.forEach((item) => {
-                message += `  * ${item.currency}: ${item.amount.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+                message += `  * ${item.currency}: ${item.amount.toLocaleString("th-TH", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}\n`;
               });
             }
-          }
-        } else if (record.payType === "NP(B)") {
-          if (record.payMethod === "cash") {
-            message += `- เงินสด (THB) จะเพิ่มขึ้น ${record.total.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
-          }
-          if (record.items && record.items.length > 0) {
-            message += `- สกุลเงินในรายการจะลดลง:\n`;
-            record.items.forEach((item) => {
-              message += `  * ${item.currency}: ${item.amount.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
-            });
-          }
-        } else if (record.payType === "NP(S)") {
-          if (record.receiveMethod === "cash") {
-            message += `- เงินสด (THB) จะลดลง ${record.total.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
-          }
-          if (record.items && record.items.length > 0) {
-            message += `- สกุลเงินในรายการจะเพิ่มขึ้น:\n`;
-            record.items.forEach((item) => {
-              message += `  * ${item.currency}: ${item.amount.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
-            });
-          }
-        } else if (record.payType === "Wechat") {
-          message += `- เงินสด (THB) จะเพิ่มขึ้น ${record.total.toLocaleString("th-TH", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}\n`;
-        } else if (record.payType === "Lottery") {
-          message += `- เงินสด (THB) จะเพิ่มขึ้น ${record.total.toLocaleString("th-TH", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}\n`;
-        } else if (record.payType === "deposit") {
-          if (record.items && record.items.length > 0) {
-            message += `- สกุลเงินในรายการจะลดลง:\n`;
-            record.items.forEach((item) => {
-              message += `  * ${item.currency}: ${item.total != null ? item.total.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}\n`;
-            });
-          }
-        } else if (record.payType === "withdraw") {
-          if (record.items && record.items.length > 0) {
-            message += `- สกุลเงินในรายการจะเพิ่มขึ้น:\n`;
-            record.items.forEach((item) => {
-              message += `  * ${item.currency}: ${item.total != null ? item.total.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}\n`;
-            });
+          } else if (record.payType === "Wechat") {
+            message += `- เงินสด (THB) จะเพิ่มขึ้น ${record.total.toLocaleString("th-TH", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}\n`;
+          } else if (record.payType === "Lottery") {
+            message += `- เงินสด (THB) จะเพิ่มขึ้น ${record.total.toLocaleString("th-TH", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}\n`;
+          } else if (record.payType === "deposit") {
+            if (record.items && record.items.length > 0) {
+              message += `- สกุลเงินในรายการจะลดลง:\n`;
+              record.items.forEach((item) => {
+                message += `  * ${item.currency}: ${
+                  item.total != null
+                    ? item.total.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    : "-"
+                }\n`;
+              });
+            }
+          } else if (record.payType === "withdraw") {
+            if (record.items && record.items.length > 0) {
+              message += `- สกุลเงินในรายการจะเพิ่มขึ้น:\n`;
+              record.items.forEach((item) => {
+                message += `  * ${item.currency}: ${
+                  item.total != null
+                    ? item.total.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    : "-"
+                }\n`;
+              });
+            }
           }
         }
       }
