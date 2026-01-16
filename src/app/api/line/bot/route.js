@@ -108,8 +108,8 @@ function formatRateFromPost(postDoc, code) {
 
   if (code === "LAK") {
     // LAK ใช้เรทฝั่งลาว
-    if (postDoc?.buylaos != null) parts.push(`กีบ - บาท: ${postDoc.buylaos}`);
-    if (postDoc?.selllaos != null) parts.push(`บาท - กีบ: ${postDoc.selllaos}`);
+    if (postDoc?.buylaos != null) parts.push(`บาท - กีบ: ${postDoc.buylaos}`);
+    if (postDoc?.selllaos != null) parts.push(`กีบ - บาท: ${postDoc.selllaos}`);
   } else {
     // สกุลอื่นใช้เรทฝั่งไทย
     if (postDoc?.buy != null) parts.push(`รับซื้อ: ${postDoc.buy}`);
