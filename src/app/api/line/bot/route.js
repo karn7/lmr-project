@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { connectMongoDB } from "@/lib/mongodb";
-import Post from "@/models/post";
+import { connectMongoDB } from "../../../../lib/mongodb";
+import Post from "../../../../models/post";
 
 /**
  * LINE Bot webhook (production)
