@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { connectMongoDB } from "../../../../../lib/mongodb";
 import Post from "../../../../../models/post";
+import mongoose from "mongoose";
 
 /**
  * LINE Bot webhook (production)
@@ -17,6 +18,44 @@ import Post from "../../../../../models/post";
  * - LINE_CHANNEL_ACCESS_TOKEN
  * - LINE_CHANNEL_SECRET
  */
+
+async function getDb() {
+  await connectMongoDB();
+  const db = mongoose?.connection?.db;
+  if (!db) throw new Error("MongoDB not connected (mongoose.connection.db is empty)");
+  return db;
+}
+
+function buildAutoReplyKey({ userId, groupId, roomId }) {
+  // Prefer userId for 1-1 chats. For group/room messages, fall back to groupId/roomId.
+  if (userId) return `user:${userId}`;
+  if (groupId) return `group:${groupId}`;
+  if (roomId) return `room:${roomId}`;
+  return null;
+}
+
+async function shouldSendLongAutoReply({ userId, groupId, roomId }, cooldownMs) {
+  const key = buildAutoReplyKey({ userId, groupId, roomId });
+  if (!key) return true; // cannot track -> send
+
+  const db = await getDb();
+  const col = db.collection("line_auto_reply_state");
+  const _id = `business-hours:${key}`;
+
+  const doc = await col.findOne({ _id });
+  const last = doc?.lastSentAt ? new Date(doc.lastSentAt).getTime() : 0;
+  const now = Date.now();
+
+  if (now - last < cooldownMs) return false;
+
+  await col.updateOne(
+    { _id },
+    { $set: { lastSentAt: new Date(now), updatedAt: new Date(now) } },
+    { upsert: true }
+  );
+
+  return true;
+}
 
 function verifyLineSignature(rawBody, signature, channelSecret) {
   if (!signature || !channelSecret) return false;
@@ -86,7 +125,7 @@ function formatRateFromPost(postDoc, code) {
     }
   }
 
-  parts.push("ต้องการแลกจำนวนเท่าไหร่ พิมพ์มาได้เลยครับ");
+  parts.push("ต้องการสอบถามข้อมูลเพิ่มเติม สามารถพิมพ์มาได้เลยครับ");
   return parts.join("\n");
 }
 
@@ -117,16 +156,53 @@ async function lineReply(replyToken, text) {
   }
 }
 
+function extractMaxBankValue(content) {
+  if (!content) return 0;
+  const nums = String(content)
+    .match(/\d+(?:\.\d+)?/g);
+  if (!nums || nums.length === 0) return 0;
+  return Math.max(...nums.map((n) => Number(n)).filter((n) => !Number.isNaN(n)));
+}
+
 async function findLatestRatePost(code) {
   await connectMongoDB();
 
   // title = currency code (USD/CNY/...) in your design
-  // Sort by updatedAt first, then createdAt for safety
-  const post = await Post.findOne({ title: code })
-    .sort({ updatedAt: -1, createdAt: -1, _id: -1 })
-    .lean();
+  const posts = await Post.find({ title: code }).lean();
+  if (!posts || posts.length === 0) return null;
 
-  return post;
+  // Pick the post with the highest banknote value (from `content`)
+  // Tie-breaker: latest updatedAt/createdAt/_id
+  let best = null;
+  let bestBank = -Infinity;
+  let bestTime = -Infinity;
+
+  for (const p of posts) {
+    const bankMax = extractMaxBankValue(p?.content);
+
+    const tRaw = p?.updatedAt || p?.createdAt || null;
+    const t = tRaw ? new Date(tRaw).getTime() : NaN;
+    const timeVal = Number.isNaN(t) ? 0 : t;
+
+    // Primary: higher bankMax
+    // Secondary: newer time
+    // Tertiary: newer _id (roughly correlates to time)
+    const idVal = p?._id ? String(p._id) : "";
+    const bestIdVal = best?._id ? String(best._id) : "";
+
+    const isBetter =
+      bankMax > bestBank ||
+      (bankMax === bestBank && timeVal > bestTime) ||
+      (bankMax === bestBank && timeVal === bestTime && idVal > bestIdVal);
+
+    if (isBetter) {
+      best = p;
+      bestBank = bankMax;
+      bestTime = timeVal;
+    }
+  }
+
+  return best;
 }
 
 export async function POST(req) {
@@ -175,14 +251,20 @@ export async function POST(req) {
       const { isRate, code } = detectCurrency(text);
 
       if (isRate && code) {
-        const post = await findLatestRatePost(code);
+        // Special rule:
+        // If user asks LAK, we answer using THB post's buylaos/selllaos fields.
+        const fetchCode = code === "LAK" ? "THB" : code;
+
+        const post = await findLatestRatePost(fetchCode);
 
         if (!post) {
           await lineReply(
             replyToken,
-            `ขออภัยครับ ตอนนี้ยังไม่พบเรทของ ${code} ในระบบ\nพิมพ์ถามใหม่อีกครั้ง หรือรอเจ้าหน้าที่ตอบกลับได้เลยครับ`
+            `ขออภัยครับ ตอนนี้ยังไม่พบเรทของ ${fetchCode} ในระบบ\nพิมพ์ถามใหม่อีกครั้ง หรือรอเจ้าหน้าที่ตอบกลับได้เลยครับ`
           );
         } else {
+          // Keep `code` as-is so formatter can decide which fields to display.
+          // (code === 'LAK' => use buylaos/selllaos)
           const msg = formatRateFromPost(post, code);
           await lineReply(replyToken, msg);
         }
@@ -190,11 +272,20 @@ export async function POST(req) {
         continue;
       }
 
-      // Not a rate question
-      await lineReply(
-        replyToken,
-        "รับทราบครับ 🙏 ถ้าเป็นคำถามเรท พิมพ์เช่น: เรท USD หรือ เรท หยวน\nเดี๋ยวเจ้าหน้าที่ตอบกลับให้โดยเร็ว"
+      // Not a rate question -> rate-limit the long auto-reply
+      const cooldownMs = Number(process.env.LINE_AUTO_REPLY_COOLDOWN_MS || "1800000"); // 30 นาที
+      const sendLong = await shouldSendLongAutoReply(
+        { userId, groupId, roomId },
+        Number.isFinite(cooldownMs) && cooldownMs > 0 ? cooldownMs : 1800000
       );
+
+      const shortMsg = "รับทราบครับ 🙏 เดี๋ยวเจ้าหน้าที่ตอบกลับให้โดยเร็ว";
+      const longMsg =
+        "ขอบคุณที่เลือกใช้บริการกับเรา เปิดทำการทุกวัน เวลา 10:00 - 19:00 ทุกช่องทาง ทั้งออนไลน์ และหน้าร้าน\n\n" +
+        "ถ้าเป็นคำถามเรท พิมพ์เช่น: เรท USD หรือ เรท หยวน\n" +
+        "เดี๋ยวเจ้าหน้าที่ตอบกลับให้โดยเร็ว";
+
+      await lineReply(replyToken, sendLong ? longMsg : shortMsg);
     } catch (err) {
       console.error("[LINE bot] event handler error:", err);
       // keep going for other events
