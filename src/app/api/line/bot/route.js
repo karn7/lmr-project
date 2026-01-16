@@ -100,7 +100,6 @@ function detectCurrency(text) {
 
 function formatRateFromPost(postDoc, code) {
   const bank = postDoc?.content ?? null;
-  const updatedAt = postDoc?.updatedAt || postDoc?.createdAt || null;
 
   const parts = [];
   parts.push(`เรทวันนี้ (${code})`);
@@ -109,21 +108,18 @@ function formatRateFromPost(postDoc, code) {
 
   if (code === "LAK") {
     // LAK ใช้เรทฝั่งลาว
-    if (postDoc?.buylaos != null) parts.push(`รับซื้อ: ${postDoc.buylaos}`);
-    if (postDoc?.selllaos != null) parts.push(`ขายออก: ${postDoc.selllaos}`);
+    if (postDoc?.buylaos != null) parts.push(`กีบ - บาท: ${postDoc.buylaos}`);
+    if (postDoc?.selllaos != null) parts.push(`บาท - กีบ: ${postDoc.selllaos}`);
   } else {
     // สกุลอื่นใช้เรทฝั่งไทย
     if (postDoc?.buy != null) parts.push(`รับซื้อ: ${postDoc.buy}`);
     if (postDoc?.sell != null) parts.push(`ขายออก: ${postDoc.sell}`);
   }
 
-  if (updatedAt) {
-    const d = new Date(updatedAt);
-    if (!Number.isNaN(d.getTime())) {
-      const dt = d.toLocaleString("th-TH", { timeZone: "Asia/Bangkok" });
-      parts.push(`อัปเดต: ${dt}`);
-    }
-  }
+  // Show current response time instead of document update time
+  const now = new Date();
+  const nowText = now.toLocaleString("th-TH", { timeZone: "Asia/Bangkok" });
+  parts.push(`อัปเดต: ${nowText}`);
 
   parts.push("ต้องการสอบถามข้อมูลเพิ่มเติม สามารถพิมพ์มาได้เลยครับ");
   return parts.join("\n");
@@ -279,13 +275,14 @@ export async function POST(req) {
         Number.isFinite(cooldownMs) && cooldownMs > 0 ? cooldownMs : 1800000
       );
 
-      const shortMsg = "รับทราบครับ 🙏 เดี๋ยวเจ้าหน้าที่ตอบกลับให้โดยเร็ว";
       const longMsg =
         "ขอบคุณที่เลือกใช้บริการกับเรา เปิดทำการทุกวัน เวลา 10:00 - 19:00 ทุกช่องทาง ทั้งออนไลน์ และหน้าร้าน\n\n" +
         "ถ้าเป็นคำถามเรท พิมพ์เช่น: เรท USD หรือ เรท หยวน\n" +
         "เดี๋ยวเจ้าหน้าที่ตอบกลับให้โดยเร็ว";
 
-      await lineReply(replyToken, sendLong ? longMsg : shortMsg);
+      if (sendLong) {
+        await lineReply(replyToken, longMsg);
+      }
     } catch (err) {
       console.error("[LINE bot] event handler error:", err);
       // keep going for other events
