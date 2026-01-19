@@ -83,7 +83,6 @@ function detectCurrency(text) {
   const map = [
     { code: "USD", re: /(\busd\b|ดอลลาร์|ดอล|dollar|us\s*d|อเมริกา|สหรัฐ)/i },
     { code: "CNY", re: /(\bcny\b|หยวน|yuan|rmb|จีน)/i },
-    { code: "THB", re: /(\bthb\b|บาท|baht|ไทย)/i },
     { code: "LAK", re: /(\blak\b|ກີບ|กีบ|kip|ลาว)/i },
     { code: "EUR", re: /(\beur\b|ยูโร|euro|ยุโรป)/i },
     { code: "JPY", re: /(\bjpy\b|เยน|yen|ญี่ปุ่น)/i },
