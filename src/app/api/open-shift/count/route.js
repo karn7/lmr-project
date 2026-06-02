@@ -8,6 +8,6 @@ export async function GET(req) {
   const branch = searchParams.get("branch");
 
   await connectMongoDB();
-  const count = await Shift.countDocuments({ date, branch });
+  const count = await Shift.countDocuments({ date, branch, isDeleted: { $ne: true } });
   return NextResponse.json({ count });
 }

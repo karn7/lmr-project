@@ -17,6 +17,7 @@ export async function POST(req) {
       shiftNo,
       employee,
       closedAt: null,
+      isDeleted: { $ne: true },
     });
 
     if (!shift) {

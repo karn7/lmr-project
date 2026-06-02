@@ -17,10 +17,10 @@ export async function GET(req) {
   let shift = null;
 
   if (shiftNo && date) {
-    shift = await Shift.findOne({ shiftNo, employee, date });
+    shift = await Shift.findOne({ shiftNo, employee, date, isDeleted: { $ne: true } });
   } else {
     const today = new Date().toISOString().slice(0, 10);
-    shift = await Shift.findOne({ date: today, employee }).sort({ createdAt: -1 });
+    shift = await Shift.findOne({ date: today, employee, isDeleted: { $ne: true } }).sort({ createdAt: -1 });
   }
 
   const isOpen = shift && !shift.closedAt;

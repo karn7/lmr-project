@@ -12,7 +12,8 @@ export async function GET() {
   try {
     const openShifts = await Shift.find({
       date: today,
-      closedAt: null
+      closedAt: null,
+      isDeleted: { $ne: true }
     });
 
     const branchBalances = openShifts.map(shift => ({
