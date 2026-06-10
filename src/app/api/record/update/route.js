@@ -1,9 +1,18 @@
 import { NextResponse } from "next/server";
 import { connectMongoDB } from "../../../../../lib/mongodb";
 import Record from "../../../../../models/record";
+import { getToken } from "next-auth/jwt";
 
 export async function POST(req) {
   try {
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    if (!token) {
+      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    }
+    if (token.role !== "admin") {
+      return NextResponse.json({ success: false, message: "Forbidden" }, { status: 403 });
+    }
+
     const { _id, docNumber, createdAt, payType, items, total, payMethod, receiveMethod, customerName } = await req.json();
 
     await connectMongoDB();

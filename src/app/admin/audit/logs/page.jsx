@@ -99,6 +99,7 @@ function LogsPage() {
               <thead className="bg-gray-100">
                 <tr>
                   <th className="p-2 border">เวลา</th>
+                  <th className="p-2 border">เลขที่รายการ</th>
                   <th className="p-2 border">ประเภท</th>
                   <th className="p-2 border">สกุล</th>
                   <th className="p-2 border">จำนวน</th>
@@ -109,7 +110,7 @@ function LogsPage() {
               </thead>
               <tbody>
                 {filteredLogs.length === 0 ? (
-                  <tr><td colSpan="7" className="text-center p-4">ไม่พบข้อมูล</td></tr>
+                  <tr><td colSpan="8" className="text-center p-4">ไม่พบข้อมูล</td></tr>
                 ) : (
                   (() => {
                     const groupColorMap = {};
@@ -126,6 +127,7 @@ function LogsPage() {
                           className={`cursor-pointer hover:bg-gray-100 ${groupColorMap[log.docNumber]}`}
                         >
                           <td className="p-2 border">{new Date(log.createdAt).toLocaleTimeString()}</td>
+                          <td className="p-2 border">{log.docNumber}</td>
                           <td className={`p-2 border ${log.action === "increase" ? "text-green-600" : "text-red-600"}`}>
                             {log.action}
                           </td>

@@ -190,6 +190,15 @@ function SideNav({ collapsed }) {
                 </Link>
               </li>
               <li>
+                <Link
+                  href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/audit/deletelogs`}
+                  className="flex items-center gap-3 my-2 p-2 rounded-lg hover:bg-gray-100"
+                >
+                  <span>🗑️</span>
+                  {!collapsed && <span>รายการที่ลบ</span>}
+                </Link>
+              </li>
+              <li>
                 <button
                   onClick={() => {
                     const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";

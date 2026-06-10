@@ -2,9 +2,11 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 
 export default function Page({ params }) {
-  const docNumber = params.docNumber;
+  const { data: session, status } = useSession();
+  const { docNumber } = React.use(params);
   const [record, setRecord] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -14,6 +16,32 @@ export default function Page({ params }) {
   const [docLogData, setDocLogData] = useState([]);
   const router = useRouter();
   const cashUpdated = useRef(false);
+
+  useEffect(() => {
+    if (status === "loading") return;
+
+    const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
+    if (!session) {
+      router.replace(`${base}/login`);
+    } else if (session?.user?.role !== "admin") {
+      router.replace(`${base}/welcome`);
+    } else if (session?.user?.lastLoginDate) {
+      const last = new Date(session.user.lastLoginDate);
+      const now = new Date();
+
+      const isNewDay =
+        last.getFullYear() !== now.getFullYear() ||
+        last.getMonth() !== now.getMonth() ||
+        last.getDate() !== now.getDate();
+
+      if (isNewDay) {
+        alert("เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่");
+        signOut();
+      }
+    }
+  }, [router, session, status]);
+
   // --- Fetch adjustment log by docNumber ---
   useEffect(() => {
     if (!record?.docNumber) return;
@@ -32,6 +60,7 @@ export default function Page({ params }) {
   }, [record?.docNumber]);
 
   useEffect(() => {
+    if (status !== "authenticated" || session?.user?.role !== "admin") return;
     if (!docNumber) return;
 
     const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -57,7 +86,7 @@ export default function Page({ params }) {
     }
 
     fetchRecord();
-  }, [docNumber]);
+  }, [docNumber, session?.user?.role, status]);
 
   async function updateCashOnDeleteOnly() {
     if (cashUpdated.current) {
@@ -250,7 +279,7 @@ export default function Page({ params }) {
     }
   }
 
-  if (loading) return <div className="text-left p-4">Loading...</div>;
+  if (status === "loading" || loading) return <div className="text-left p-4">Loading...</div>;
   if (error) return <div className="text-left p-4 text-red-600">Error: {error}</div>;
   if (!record) return <div className="text-left p-4">No record found.</div>;
 
@@ -762,7 +791,8 @@ export default function Page({ params }) {
             <th className="border-r border-gray-300 px-3 py-2 text-left">Unit</th>
             <th className="border-r border-gray-300 px-3 py-2 text-left">Rate</th>
             <th className="border-r border-gray-300 px-3 py-2 text-left">Amount</th>
-            <th className="px-3 py-2 text-left">Total</th>
+            <th className="border-r border-gray-300 px-3 py-2 text-left">Total</th>
+            <th className="px-3 py-2 text-center">จัดการ</th>
           </tr>
         </thead>
         <tbody>
@@ -880,10 +910,30 @@ export default function Page({ params }) {
                             style={{ minWidth: 60 }}
                           />
                         </td>
+                        <td className="px-3 py-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (editableRecord.items.length === 1) {
+                                const newItems = [
+                                  { currency: "", unit: "", rate: "", amount: "", total: "" },
+                                ];
+                                recalculateRecordTotal(newItems);
+                                return;
+                              }
+
+                              const newItems = editableRecord.items.filter((_, idx) => idx !== index);
+                              recalculateRecordTotal(newItems);
+                            }}
+                            className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-sm"
+                          >
+                            ลบ
+                          </button>
+                        </td>
                       </tr>
                     ))}
                     <tr>
-                      <td colSpan="5" className="p-2 text-center">
+                      <td colSpan="6" className="p-2 text-center">
                         <button
                           className="text-sm bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
                           onClick={() => {
@@ -902,7 +952,7 @@ export default function Page({ params }) {
                 )
               : (
                 <tr>
-                  <td colSpan="5" className="text-center p-4">No items found.</td>
+                  <td colSpan="6" className="text-center p-4">No items found.</td>
                 </tr>
               )
             : record.items && record.items.length > 0 ? (
@@ -918,14 +968,15 @@ export default function Page({ params }) {
                   <td className="border-r border-gray-300 px-3 py-2">
                     {item.amount != null ? item.amount.toLocaleString("th-TH", { minimumFractionDigits: 2 }) : "-"}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="border-r border-gray-300 px-3 py-2">
                     {item.total != null ? item.total.toLocaleString("th-TH", { minimumFractionDigits: 2 }) : "-"}
                   </td>
+                  <td className="px-3 py-2 text-center text-gray-400">-</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="5" className="text-center p-4">No items found.</td>
+                <td colSpan="6" className="text-center p-4">No items found.</td>
               </tr>
             )}
         </tbody>
