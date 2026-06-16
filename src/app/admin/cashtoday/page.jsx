@@ -9,6 +9,10 @@ const CashTodayPage = () => {
   const [totalThbValue, setTotalThbValue] = useState(0);
   const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [bankBalances, setBankBalances] = useState({});
+  const [showExtraAmountForm, setShowExtraAmountForm] = useState(false);
+  const [extraAmountDraft, setExtraAmountDraft] = useState({});
+  const [confirmedExtraAmounts, setConfirmedExtraAmounts] = useState({});
+  const [availableCurrencies, setAvailableCurrencies] = useState([]);
   const [allEmployees, setAllEmployees] = useState([]);
 
   const formatCurrency = (amount) => {
@@ -35,9 +39,16 @@ const CashTodayPage = () => {
       const posts = data.posts || [];
 
       const rateMap = {};
+      const currencySet = new Set(["THB"]);
+
       posts.forEach((post) => {
         const currency = normalizeCurrency(post.title || post.content);
         const buyRate = Number(post.buy);
+
+        if (currency) {
+          currencySet.add(currency);
+        }
+
         if (currency && Number.isFinite(buyRate)) {
           rateMap[currency] = buyRate;
         }
@@ -45,6 +56,7 @@ const CashTodayPage = () => {
 
       rateMap.THB = 1;
       setRates(rateMap);
+      setAvailableCurrencies(Array.from(currencySet));
     } catch (err) {
       console.error("Error fetching exchange rates", err);
     }
@@ -93,6 +105,13 @@ const CashTodayPage = () => {
       totalsByCurrency[currency] += numericAmount;
     });
 
+    Object.entries(confirmedExtraAmounts).forEach(([currency, amount]) => {
+      const numericAmount = Number(amount) || 0;
+      if (numericAmount === 0) return;
+      if (!totalsByCurrency[currency]) totalsByCurrency[currency] = 0;
+      totalsByCurrency[currency] += numericAmount;
+    });
+
     const totalInThb = Object.entries(totalsByCurrency).reduce(
       (sum, [currency, amount]) => {
         const cur = normalizeCurrency(currency);
@@ -108,10 +127,17 @@ const CashTodayPage = () => {
 
     setTotalBalance(totalsByCurrency);
     setTotalThbValue(totalInThb);
-  }, [selectedEmployees, branchBalances, rates, bankBalances]);
+  }, [selectedEmployees, branchBalances, rates, bankBalances, confirmedExtraAmounts]);
 
   return (
     <div className="p-6 bg-white min-h-screen">
+      <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-green-900 shadow-sm">
+        <div className="text-sm font-medium">ยอดรวมตีเป็นเงินบาท</div>
+        <div className="text-2xl font-bold">THB {formatCurrency(totalThbValue)}</div>
+        <div className="mt-1 text-xs text-green-700">
+          THB ใช้ยอดเงินจริง ส่วนสกุลอื่นคำนวณจากเรทซื้อ (buy)
+        </div>
+      </div>
       <div className="mb-4">
         <label className="block font-medium mb-1">เลือกพนักงานที่ต้องการแสดง:</label>
         <div className="flex flex-wrap flex-row gap-x-4 gap-y-1 max-w-4xl">
@@ -187,15 +213,66 @@ const CashTodayPage = () => {
             })}
           </div>
         </div>
-      </div>
-      <h1 className="text-xl font-bold mb-4">ยอดเงินรวมทั้งหมดของวันนี้</h1>
-      <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-green-900 shadow-sm">
-        <div className="text-sm font-medium">ยอดรวมตีเป็นเงินบาท</div>
-        <div className="text-2xl font-bold">THB {formatCurrency(totalThbValue)}</div>
-        <div className="mt-1 text-xs text-green-700">
-          THB ใช้ยอดเงินจริง ส่วนสกุลอื่นคำนวณจากเรทซื้อ (buy)
+
+        <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <label className="inline-flex items-center font-medium text-blue-900">
+            <input
+              type="checkbox"
+              checked={showExtraAmountForm}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setShowExtraAmountForm(checked);
+
+                if (!checked) {
+                  setExtraAmountDraft({});
+                  setConfirmedExtraAmounts({});
+                }
+              }}
+              className="mr-2"
+            />
+            เพิ่มจำนวนเงิน
+          </label>
+
+          {showExtraAmountForm && (
+            <div className="mt-4">
+              <div className="mb-2 text-sm text-blue-800">
+                แสดงสกุลเงินทั้งหมดจาก posts เพื่อกรอกยอดเพิ่มเติม แล้วกดยืนยันเพื่อรวมคำนวณเป็นเงินบาท
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {availableCurrencies.map((currency) => (
+                  <div key={currency} className="rounded border border-blue-100 bg-white p-3">
+                    <label className="mb-1 block text-sm font-medium">
+                      {currency}
+                    </label>
+                    <input
+                      type="number"
+                      value={extraAmountDraft[currency] || ""}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setExtraAmountDraft((prev) => ({
+                          ...prev,
+                          [currency]: value,
+                        }));
+                      }}
+                      placeholder={`ยอด ${currency}`}
+                      className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setConfirmedExtraAmounts(extraAmountDraft)}
+                className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                ยืนยันเพิ่มจำนวนเงิน
+              </button>
+            </div>
+          )}
         </div>
       </div>
+      <h1 className="text-xl font-bold mb-4">ยอดเงินรวมทั้งหมดของวันนี้</h1>
       <div className="mb-4 text-sm text-gray-800">
         {Object.keys(totalBalance).length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-6 gap-y-2">
