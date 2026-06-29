@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 async function loadImageObjectUrl(url) {
   const res = await fetch(url, { cache: "no-store" });
@@ -20,7 +20,8 @@ async function loadImageObjectUrl(url) {
   return objectUrl;
 }
 
-export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
+export default function ReceiptByDocNumberPage() {
+  const { docNumber } = useParams();
   const [record, setRecord] = useState(null);
   const [employeeSignatureSrc, setEmployeeSignatureSrc] = useState("");
   const [customerSignatureSrc, setCustomerSignatureSrc] = useState("");
