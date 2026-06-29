@@ -6,7 +6,7 @@ import { useSession, signOut } from "next-auth/react";
 
 export default function Page({ params }) {
   const { data: session, status } = useSession();
-  const { docNumber } = React.use(params);
+  const { docNumber } = params;
   const [record, setRecord] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -14,6 +14,8 @@ export default function Page({ params }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editableRecord, setEditableRecord] = useState(null);
   const [docLogData, setDocLogData] = useState([]);
+  const [showEmployeeSignature, setShowEmployeeSignature] = useState(true);
+  const [showCustomerSignature, setShowCustomerSignature] = useState(true);
   const router = useRouter();
   const cashUpdated = useRef(false);
 
@@ -45,6 +47,8 @@ export default function Page({ params }) {
   // --- Fetch adjustment log by docNumber ---
   useEffect(() => {
     if (!record?.docNumber) return;
+    setShowEmployeeSignature(true);
+    setShowCustomerSignature(true);
 
     const fetchDocLogs = async () => {
       try {
@@ -292,6 +296,11 @@ export default function Page({ params }) {
     hour12: false,
   };
   const formattedDate = new Date(record.createdAt).toLocaleString("th-TH", options).replace(",", " เวลา");
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+  const employeeSignatureParams = new URLSearchParams({
+    employeeCode: record.employeeCode || "",
+    name: record.employee || "",
+  });
 
   // For editing: derive timeOnly string from createdAt
   function getTimeOnly(dateStr) {
@@ -983,6 +992,53 @@ export default function Page({ params }) {
       </table>
 
       <p className="mt-4"><strong>หมายเหตุ:</strong> {record.note}</p>
+
+      {!isEditing && (
+        <div className="mt-6 rounded-md border bg-gray-50 p-4">
+          <h2 className="mb-3 text-lg font-semibold">ลายเซ็น</h2>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="rounded border bg-white p-3 text-center">
+              <div className="mb-2 text-sm font-semibold text-gray-700">พนักงาน</div>
+              <div className="flex h-32 items-end justify-center overflow-hidden border-b border-black">
+                {showEmployeeSignature && (
+                  <img
+                    src={`${basePath}/api/employee-signature/image?${employeeSignatureParams.toString()}`}
+                    alt="Employee Signature"
+                    className="max-h-32 max-w-full object-contain"
+                    style={{
+                      transform: "translateY(18px) scale(1.65)",
+                      transformOrigin: "center bottom",
+                    }}
+                    onError={() => setShowEmployeeSignature(false)}
+                  />
+                )}
+              </div>
+              <div className="mt-2 text-sm">{record.employee || "-"}</div>
+              {!showEmployeeSignature && (
+                <div className="mt-2 text-xs text-gray-400">ไม่มีลายเซ็นพนักงาน</div>
+              )}
+            </div>
+
+            <div className="rounded border bg-white p-3 text-center">
+              <div className="mb-2 text-sm font-semibold text-gray-700">ลูกค้า</div>
+              <div className="flex h-32 items-end justify-center overflow-hidden border-b border-black">
+                {showCustomerSignature && (
+                  <img
+                    src={`${basePath}/api/record/${record.docNumber}/signature/image`}
+                    alt="Customer Signature"
+                    className="max-h-32 max-w-full object-contain"
+                    onError={() => setShowCustomerSignature(false)}
+                  />
+                )}
+              </div>
+              <div className="mt-2 text-sm">{record.customerName || "Customer"}</div>
+              {!showCustomerSignature && (
+                <div className="mt-2 text-xs text-gray-400">ไม่มีลายเซ็นลูกค้า</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Save/Cancel buttons */}
       {isEditing && (

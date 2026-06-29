@@ -3,9 +3,28 @@ import React from "react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function ReceiptByDocNumberPage(props) {
-  const { docNumber } = props.params;
+async function loadImageObjectUrl(url) {
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) return "";
+
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+
+  await new Promise((resolve, reject) => {
+    const image = new window.Image();
+    image.onload = resolve;
+    image.onerror = reject;
+    image.src = objectUrl;
+  });
+
+  return objectUrl;
+}
+
+export default function ReceiptByDocNumberPage({ params: { docNumber } }) {
   const [record, setRecord] = useState(null);
+  const [employeeSignatureSrc, setEmployeeSignatureSrc] = useState("");
+  const [customerSignatureSrc, setCustomerSignatureSrc] = useState("");
+  const [isLoadingSignatures, setIsLoadingSignatures] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -15,19 +34,60 @@ export default function ReceiptByDocNumberPage(props) {
         if (!res.ok) throw new Error("Failed to fetch record");
         const data = await res.json();
         setRecord(data.record);
-        
-        setTimeout(() => {
-          window.print();
-          setTimeout(() => window.close(), 100);
-        }, 1000);
       } catch (err) {
         console.error(err);
         router.push(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/error`);
       }
     };
-
     fetchData();
   }, [docNumber, router]);
+
+  useEffect(() => {
+    if (!record) return;
+
+    let cancelled = false;
+    const objectUrls = [];
+
+    const loadSignatures = async () => {
+      setIsLoadingSignatures(true);
+      setEmployeeSignatureSrc("");
+      setCustomerSignatureSrc("");
+
+      const employeeSignatureParams = new URLSearchParams({
+        employeeCode: record.employeeCode || "",
+        name: record.employee || "",
+      });
+
+      const employeeSignatureUrl = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/employee-signature/image?${employeeSignatureParams.toString()}`;
+      const customerSignatureUrl = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/record/${record.docNumber}/signature/image`;
+
+      try {
+        const [employeeSrc, customerSrc] = await Promise.all([
+          loadImageObjectUrl(employeeSignatureUrl).catch(() => ""),
+          loadImageObjectUrl(customerSignatureUrl).catch(() => ""),
+        ]);
+
+        if (employeeSrc) objectUrls.push(employeeSrc);
+        if (customerSrc) objectUrls.push(customerSrc);
+
+        if (cancelled) return;
+
+        setEmployeeSignatureSrc(employeeSrc);
+        setCustomerSignatureSrc(customerSrc);
+      } finally {
+        if (!cancelled) {
+          setIsLoadingSignatures(false);
+        }
+      }
+    };
+
+    loadSignatures();
+
+    return () => {
+      cancelled = true;
+      objectUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [record]);
 
   if (!record) {
     return null;
@@ -117,6 +177,19 @@ export default function ReceiptByDocNumberPage(props) {
           <div className="flex flex-col justify-end h-[200px]">
             <div className="mt-10 flex flex-row justify-between px-8">
               <div className="flex flex-col items-center w-1/2">
+                <div className="h-32 flex items-end justify-center -mb-3 overflow-hidden">
+                  {employeeSignatureSrc && (
+                    <img
+                      src={employeeSignatureSrc}
+                      alt="Employee Signature"
+                      className="max-h-32 max-w-full object-contain"
+                      style={{
+                        transform: "translateY(18px) scale(1.65)",
+                        transformOrigin: "center bottom",
+                      }}
+                    />
+                  )}
+                </div>
                 <div className="border-t border-black w-4/5" />
                 <div className="mt-1 text-sm text-center">
                   <div>Issued by:</div>
@@ -124,6 +197,15 @@ export default function ReceiptByDocNumberPage(props) {
                 </div>
               </div>
               <div className="flex flex-col items-center w-1/2">
+                <div className="h-32 flex items-end justify-center -mb-3 overflow-hidden">
+                  {customerSignatureSrc && (
+                    <img
+                      src={customerSignatureSrc}
+                      alt="Customer Signature"
+                      className="max-h-32 max-w-full object-contain"
+                    />
+                  )}
+                </div>
                 <div className="border-t border-black w-4/5" />
                 <div className="mt-1 text-sm text-center">Customer {record.customerName}</div>
               </div>
@@ -141,6 +223,26 @@ export default function ReceiptByDocNumberPage(props) {
         </div>
       </div>
     </div>
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 print:hidden">
+        <div className="max-w-3xl mx-auto flex justify-end gap-3">
+          <button
+            onClick={() => window.close()}
+            className="px-5 py-2 rounded-lg border"
+          >
+            ปิด
+          </button>
+
+          <button
+            onClick={() => {
+              window.print();
+            }}
+            disabled={isLoadingSignatures}
+            className="px-5 py-2 rounded-lg bg-orange-500 text-white font-semibold hover:bg-orange-600"
+          >
+            {isLoadingSignatures ? "กำลังโหลดลายเซ็น..." : "พิมพ์ใบเสร็จ"}
+          </button>
+        </div>
+      </div>
     </>
   );
 }

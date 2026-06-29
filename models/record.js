@@ -5,6 +5,7 @@ const recordSchema = new Schema({
   customerId: String, // รหัสลูกค้าเชื่อมกับ customer collection (เช่น idNumber)
   customerName: String,
   employee: String,
+  employeeCode: String,
   branch: String,
   shiftNo: String,
   date: String,
@@ -19,6 +20,8 @@ const recordSchema = new Schema({
   },
   receiveMethodNote: String,
   note: String,
+  signatureRequired: Boolean,
+  signatureConfirmed: Boolean,
   items: [
     {
       
@@ -29,6 +32,13 @@ const recordSchema = new Schema({
       total: Number
     }
   ],
+  customerSignature: {
+    image: Buffer,
+    contentType: {
+      type: String,
+      default: "image/png"
+    }
+  },
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: false });
 

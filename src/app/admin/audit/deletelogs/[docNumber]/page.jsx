@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Page({ params }) {
-  const { docNumber } = React.use(params);
+  const { docNumber } = params;
   const router = useRouter();
 
   const [record, setRecord] = useState(null);

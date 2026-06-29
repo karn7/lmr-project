@@ -30,6 +30,13 @@ const userSchema = new Schema(
             type: String,
             required: false,
         },
+        employeeSignature: {
+            image: Buffer,
+            contentType: {
+                type: String,
+                default: "image/png"
+            }
+        },
     },
     { timestamps: true }
 )
