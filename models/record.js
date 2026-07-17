@@ -42,5 +42,7 @@ const recordSchema = new Schema({
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: false });
 
+recordSchema.index({ createdAt: -1 });
+
 const Record = mongoose.models.Record || mongoose.model("Record", recordSchema);
 export default Record;

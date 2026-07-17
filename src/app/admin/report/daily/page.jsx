@@ -19,23 +19,64 @@ function ReportPage() {
     const [selectedEmployee, setSelectedEmployee] = useState("ทั้งหมด");
     const [selectedType, setSelectedType] = useState("ทั้งหมด");
     const [branches, setBranches] = useState([]);
-    const [employees, setEmployees] = useState([]);
     const [types, setTypes] = useState([]);
     const [sortKey, setSortKey] = useState(null);
     const [sortOrder, setSortOrder] = useState("asc");
     const [selectedRow, setSelectedRow] = useState(null);
-    
-    useEffect(() => {
-        // fetch records
-        fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/record`)
-          .then((res) => res.json())
-          .then((data) => {
-            setRecords(data.records);
-            const allBranches = Array.from(new Set(data.records.map((r) => r.branch)));
-            setBranches(allBranches);
-            setTypes(Array.from(new Set(data.records.map((r) => r.payType))));
-          });
-    }, []);
+    const [isLoading, setIsLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+    const [hasLoaded, setHasLoaded] = useState(false);
+
+    const resetRecords = () => {
+      setRecords([]);
+      setBranches([]);
+      setTypes([]);
+      setSelectedBranch("ทั้งหมด");
+      setSelectedEmployee("ทั้งหมด");
+      setSelectedType("ทั้งหมด");
+      setSelectedRow(null);
+      setHasLoaded(false);
+      setErrorMessage("");
+    };
+
+    const loadRecords = async () => {
+      if (!selectedDate) return;
+
+      setIsLoading(true);
+      setErrorMessage("");
+      setSelectedBranch("ทั้งหมด");
+      setSelectedEmployee("ทั้งหมด");
+      setSelectedType("ทั้งหมด");
+      setSelectedRow(null);
+
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/record?date=${encodeURIComponent(selectedDate)}`,
+          { cache: "no-store" }
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || data.message || "Failed to fetch records.");
+        }
+
+        const fetchedRecords = Array.isArray(data.records) ? data.records : [];
+
+        setRecords(fetchedRecords);
+        setBranches(Array.from(new Set(fetchedRecords.map((r) => r.branch).filter(Boolean))));
+        setTypes(Array.from(new Set(fetchedRecords.map((r) => r.payType).filter(Boolean))));
+        setHasLoaded(true);
+      } catch (error) {
+        console.error("Error fetching records:", error);
+        setRecords([]);
+        setBranches([]);
+        setTypes([]);
+        setErrorMessage("โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+        setHasLoaded(true);
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
     const uniqueEmployees = Array.isArray(records)
       ? Array.from(
@@ -48,11 +89,10 @@ function ReportPage() {
       : [];
     
     const filtered = records.filter((r) => {
-      const dateMatch = new Date(r.createdAt).toISOString().split("T")[0] === selectedDate;
       const branchMatch = selectedBranch === "ทั้งหมด" || r.branch === selectedBranch;
       const employeeMatch = selectedEmployee === "ทั้งหมด" || r.employee === selectedEmployee;
       const typeMatch = selectedType === "ทั้งหมด" || r.payType === selectedType;
-      return dateMatch && branchMatch && employeeMatch && typeMatch;
+      return branchMatch && employeeMatch && typeMatch;
     });
 
     const sortedFiltered = [...filtered].sort((a, b) => {
@@ -130,14 +170,30 @@ function ReportPage() {
                 type="date"
                 className="border p-2 rounded w-32 h-10"
                 value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
+                onChange={(e) => {
+                  setSelectedDate(e.target.value);
+                  resetRecords();
+                }}
               />
             </label>
+            <button
+              type="button"
+              onClick={loadRecords}
+              disabled={isLoading || !selectedDate}
+              className={`h-10 rounded px-4 font-semibold text-white ${
+                isLoading || !selectedDate
+                  ? "cursor-not-allowed bg-gray-400"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
+            >
+              {isLoading ? "กำลังโหลด..." : "แสดงข้อมูล"}
+            </button>
             <label className="flex flex-col text-sm font-medium">
               สาขา:
               <select
                 className="border p-2 rounded w-32 h-10"
                 value={selectedBranch}
+                disabled={!hasLoaded || isLoading}
                 onChange={(e) => {
                   setSelectedBranch(e.target.value);
                   setSelectedEmployee("ทั้งหมด");
@@ -154,6 +210,7 @@ function ReportPage() {
               <select
                 className="border p-2 rounded w-32 h-10"
                 value={selectedEmployee}
+                disabled={!hasLoaded || isLoading}
                 onChange={(e) => setSelectedEmployee(e.target.value)}
               >
                 <option>ทั้งหมด</option>
@@ -167,6 +224,7 @@ function ReportPage() {
               <select
                 className="border p-2 rounded w-32 h-10"
                 value={selectedType}
+                disabled={!hasLoaded || isLoading}
                 onChange={(e) => setSelectedType(e.target.value)}
               >
                 <option>ทั้งหมด</option>
@@ -176,6 +234,12 @@ function ReportPage() {
               </select>
             </label>
           </div>
+
+          {errorMessage && (
+            <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {errorMessage}
+            </div>
+          )}
 
           <table className="w-full text-left border mb-10">
             <thead className="bg-gray-100 hidden md:table-header-group">
@@ -205,7 +269,7 @@ function ReportPage() {
             </thead>
             {/* Desktop Table */}
             <tbody className="hidden md:table-row-group">
-              {sortedFiltered.map((r) => (
+              {!isLoading && hasLoaded && sortedFiltered.map((r) => (
                 <tr key={r.docNumber}>
                   <td className="p-2 border">{r.docNumber}</td>
                   <td className="p-2 border">{new Date(r.createdAt).toLocaleTimeString()}</td>
@@ -230,11 +294,32 @@ function ReportPage() {
                   </td>
                 </tr>
               ))}
+              {isLoading && (
+                <tr>
+                  <td className="p-4 text-center text-gray-500" colSpan={9}>
+                    กำลังโหลดข้อมูล...
+                  </td>
+                </tr>
+              )}
+              {!isLoading && !hasLoaded && (
+                <tr>
+                  <td className="p-4 text-center text-gray-500" colSpan={9}>
+                    กรุณาเลือกวันที่ แล้วกดแสดงข้อมูล
+                  </td>
+                </tr>
+              )}
+              {!isLoading && hasLoaded && sortedFiltered.length === 0 && (
+                <tr>
+                  <td className="p-4 text-center text-gray-500" colSpan={9}>
+                    ไม่พบข้อมูลในวันที่เลือก
+                  </td>
+                </tr>
+              )}
             </tbody>
 
             {/* Mobile View */}
             <tbody className="md:hidden">
-              {sortedFiltered.map((r) => (
+              {!isLoading && hasLoaded && sortedFiltered.map((r) => (
                 <tr key={r.docNumber} className="border-b" onClick={() => setSelectedRow(r.docNumber)}>
                   <td className="p-3">
                     <div className="font-semibold">{r.docNumber}</div>
@@ -264,6 +349,27 @@ function ReportPage() {
                   </td>
                 </tr>
               ))}
+              {isLoading && (
+                <tr>
+                  <td className="p-4 text-center text-gray-500">
+                    กำลังโหลดข้อมูล...
+                  </td>
+                </tr>
+              )}
+              {!isLoading && !hasLoaded && (
+                <tr>
+                  <td className="p-4 text-center text-gray-500">
+                    กรุณาเลือกวันที่ แล้วกดแสดงข้อมูล
+                  </td>
+                </tr>
+              )}
+              {!isLoading && hasLoaded && sortedFiltered.length === 0 && (
+                <tr>
+                  <td className="p-4 text-center text-gray-500">
+                    ไม่พบข้อมูลในวันที่เลือก
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

@@ -32,13 +32,40 @@ export async function POST(req) {
   }
 }
 
-export async function GET() {
+export async function GET(req) {
   try {
     await connectMongoDB();
-    const records = await Record.find().sort({ createdAt: -1 }); // Sort latest first
+
+    const { searchParams } = new URL(req.url);
+    const date = searchParams.get("date");
+    const pipeline = [];
+
+    if (date) {
+      const startDate = new Date(`${date}T00:00:00.000Z`);
+      const endDate = new Date(startDate);
+      endDate.setUTCDate(endDate.getUTCDate() + 1);
+
+      pipeline.push({
+        $match: {
+          $or: [
+            { date },
+            { createdAt: { $gte: startDate, $lt: endDate } },
+          ],
+        },
+      });
+    }
+
+    const records = await Record.aggregate([
+      ...pipeline,
+      { $sort: { createdAt: -1 } },
+      { $project: { "customerSignature.image": 0 } },
+    ]).allowDiskUse(true); // Sort latest first
     return NextResponse.json({ records }, { status: 200 });
   } catch (error) {
     console.error("Error fetching records:", error);
-    return NextResponse.json({ message: "Failed to fetch records" }, { status: 500 });
+    return NextResponse.json(
+      { message: "Failed to fetch records", error: error.message },
+      { status: 500 }
+    );
   }
 }
