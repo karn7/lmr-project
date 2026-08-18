@@ -46,7 +46,7 @@ export async function GET(req) {
   }).lean();
 
   const inOutMap = new Map();  // currency → total amount
-  const rateTMap = new Map();  // currency → { totalRate, count }
+  const rateTMap = new Map();  // currency → { totalValue, totalAmount }
 
   for (const rec of records) {
     for (const item of rec.items) {
@@ -56,10 +56,10 @@ export async function GET(req) {
         (inOutMap.get(item.currency) ?? 0) + (item.amount ?? 0)
       );
 
-      // เรทวันนี้ (สะสมไว้เพื่อหาค่าเฉลี่ย)
-      const r = rateTMap.get(item.currency) ?? { total: 0, count: 0 };
-      r.total += item.rate;
-      r.count += 1;
+      // เรทวันนี้แบบถ่วงน้ำหนักตามจำนวนซื้อเข้า
+      const r = rateTMap.get(item.currency) ?? { totalValue: 0, totalAmount: 0 };
+      r.totalValue += (item.amount ?? 0) * (item.rate ?? 0);
+      r.totalAmount += item.amount ?? 0;
       rateTMap.set(item.currency, r);
     }
   }
@@ -76,8 +76,8 @@ export async function GET(req) {
     const inout    = inOutMap.get(cur)  ?? 0;
 
     const rY       = rateYMap.get(cur)  ?? 0;
-    const rTobj    = rateTMap.get(cur)  ?? { total: 0, count: 0 };
-    const rT       = rTobj.count ? (rTobj.total / rTobj.count) : 0;
+    const rTobj    = rateTMap.get(cur)  ?? { totalValue: 0, totalAmount: 0 };
+    const rT       = rTobj.totalAmount ? (rTobj.totalValue / rTobj.totalAmount) : 0;
 
     return {
       currency     : cur,

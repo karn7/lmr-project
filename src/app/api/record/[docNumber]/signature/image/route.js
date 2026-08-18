@@ -35,3 +35,31 @@ export async function GET(request, { params }) {
     );
   }
 }
+
+export async function DELETE(request, { params }) {
+  try {
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+    if (!token || token.role !== "admin") {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    await connectMongoDB();
+
+    const record = await Record.findOne({ docNumber: params.docNumber });
+    if (!record) {
+      return NextResponse.json({ message: "ไม่พบรายการ" }, { status: 404 });
+    }
+
+    record.customerSignature = undefined;
+    record.signatureConfirmed = false;
+    await record.save();
+
+    return NextResponse.json({ success: true, message: "ลบลายเซ็นลูกค้าเรียบร้อย" });
+  } catch (error) {
+    console.error("Delete signature error:", error);
+    return NextResponse.json(
+      { message: "เกิดข้อผิดพลาดในการลบลายเซ็น" },
+      { status: 500 }
+    );
+  }
+}

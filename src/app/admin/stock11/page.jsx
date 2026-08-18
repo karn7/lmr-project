@@ -85,8 +85,8 @@ function AdminPage() {
         const averageRate = (() => {
           if (!rateY && rateT) return rateT;
           if (!rateT && rateY) return rateY;
-          const totalAmount = carry + inout;
-          return totalAmount ? ((carry * rateY) + (inout * rateT)) / totalAmount : 0;
+          const weightedAmount = carry + buyTotal;
+          return weightedAmount ? ((carry * rateY) + (buyTotal * rateT)) / weightedAmount : 0;
         })();
 
         return {
@@ -228,7 +228,9 @@ function AdminPage() {
     const result = await res.json();
     console.log("📦 บันทึกข้อมูลแล้ว:", result);
     alert("บันทึกข้อมูลเรียบร้อยแล้ว");
-    window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin`;
+    setAlreadyCalculated(true);
+    setCalculatedStock([]);
+    setShowStockTable(false);
   };
 
   return (
@@ -243,7 +245,11 @@ function AdminPage() {
               <select
                 className="px-4 py-2 border rounded bg-white text-gray-700"
                 value={selectedBranch}
-                onChange={(e) => setSelectedBranch(e.target.value)}
+                onChange={(e) => {
+                  setSelectedBranch(e.target.value);
+                  setCalculatedStock([]);
+                  setShowStockTable(false);
+                }}
               >
                 <option value="">-- เลือกสาขา --</option>
                 {branches.map((b) => (
@@ -257,6 +263,8 @@ function AdminPage() {
                   const date = new Date(e.target.value);
                   const formatted = date.toISOString().split("T")[0];
                   setSelectedDateForDailyStock((prev) => ({ ...prev, start: formatted }));
+                  setCalculatedStock([]);
+                  setShowStockTable(false);
                 }}
                 className="border rounded px-2 py-2"
                 disabled={!selectedBranch}

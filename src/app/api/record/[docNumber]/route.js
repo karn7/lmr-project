@@ -1,5 +1,6 @@
 import { connectMongoDB } from "../../../../../lib/mongodb";
 import Record from "../../../../../models/record";
+import Customer from "../../../../../models/Customer";
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
@@ -15,12 +16,31 @@ export async function GET(req, { params }) {
 
     await connectMongoDB();
 
-    const record = await Record.findOne({ docNumber: params.docNumber }); // 👈 ใช้ docNumber แทน _id
+    const record = await Record.findOne({ docNumber: params.docNumber }).lean(); // 👈 ใช้ docNumber แทน _id
     if (!record) {
       return NextResponse.json({ message: "Record not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ record }, { status: 200 });
+    const customer = record.customerId
+      ? await Customer.findOne({ idNumber: record.customerId }).lean()
+      : null;
+
+    return NextResponse.json(
+      {
+        record: {
+          ...record,
+          customer: customer
+            ? {
+                fullName: customer.fullName,
+                nationality: customer.nationality,
+                idType: customer.idType,
+                idNumber: customer.idNumber,
+              }
+            : null,
+        },
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error fetching record:", error);
     return NextResponse.json({ message: "Server error" }, { status: 500 });

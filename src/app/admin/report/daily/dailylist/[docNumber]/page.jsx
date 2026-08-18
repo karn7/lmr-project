@@ -11,6 +11,7 @@ export default function Page({ params }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeletingCustomerSignature, setIsDeletingCustomerSignature] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editableRecord, setEditableRecord] = useState(null);
   const [docLogData, setDocLogData] = useState([]);
@@ -297,6 +298,14 @@ export default function Page({ params }) {
   };
   const formattedDate = new Date(record.createdAt).toLocaleString("th-TH", options).replace(",", " เวลา");
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+  const customerNationality = record.customer?.nationality || record.nationality || "-";
+  const customerIdNumber = record.customer?.idNumber || record.customerId || "-";
+  const customerIdType =
+    record.customer?.idType === "thai_id"
+      ? "เลขบัตรประชาชน"
+      : record.customer?.idType === "passport"
+      ? "พาสปอร์ต"
+      : "เลขบัตร/พาสปอร์ต";
   const employeeSignatureParams = new URLSearchParams({
     employeeCode: record.employeeCode || "",
     name: record.employee || "",
@@ -500,6 +509,40 @@ export default function Page({ params }) {
       alert("เกิดข้อผิดพลาด: " + error.message);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteCustomerSignature = async () => {
+    if (isDeletingCustomerSignature || !record?.docNumber) return;
+    if (!confirm(`ต้องการลบลายเซ็นลูกค้าของรายการ ${record.docNumber} หรือไม่?`)) return;
+
+    setIsDeletingCustomerSignature(true);
+    try {
+      const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+      const res = await fetch(`${base}/api/record/${record.docNumber}/signature/image`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.message || "ลบลายเซ็นลูกค้าไม่สำเร็จ");
+      }
+
+      setShowCustomerSignature(false);
+      setRecord((prev) =>
+        prev
+          ? {
+              ...prev,
+              customerSignature: undefined,
+              signatureConfirmed: false,
+            }
+          : prev
+      );
+      alert("ลบลายเซ็นลูกค้าเรียบร้อยแล้ว");
+    } catch (err) {
+      alert("เกิดข้อผิดพลาด: " + err.message);
+    } finally {
+      setIsDeletingCustomerSignature(false);
     }
   };
 
@@ -746,6 +789,8 @@ export default function Page({ params }) {
     record.customerName
   )}
 </p>
+        <p><strong>สัญชาติ:</strong> {customerNationality}</p>
+        <p><strong>{customerIdType}:</strong> {customerIdNumber}</p>
         <p>
           <strong>ลูกค้าจ่ายเงินเป็น:</strong>{" "}
           {isEditing ? (
@@ -1020,7 +1065,21 @@ export default function Page({ params }) {
             </div>
 
             <div className="rounded border bg-white p-3 text-center">
-              <div className="mb-2 text-sm font-semibold text-gray-700">ลูกค้า</div>
+              <div className="mb-2 flex items-center justify-between gap-2 text-sm font-semibold text-gray-700">
+                <span>ลูกค้า</span>
+                {showCustomerSignature && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteCustomerSignature}
+                    disabled={isDeletingCustomerSignature}
+                    className={`rounded bg-red-600 px-3 py-1 text-xs font-semibold text-white ${
+                      isDeletingCustomerSignature ? "opacity-50 cursor-not-allowed" : "hover:bg-red-700"
+                    }`}
+                  >
+                    {isDeletingCustomerSignature ? "กำลังลบ..." : "ลบลายเซ็น"}
+                  </button>
+                )}
+              </div>
               <div className="flex h-32 items-end justify-center overflow-hidden border-b border-black">
                 {showCustomerSignature && (
                   <img
