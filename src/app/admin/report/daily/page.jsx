@@ -10,11 +10,37 @@ import Footer from '../../components/Footer'
 import { useSession, signOut } from 'next-auth/react'
 import { redirect } from 'next/navigation'
 
+const PAY_TYPE_OPTIONS = [
+  "Buying",
+  "Selling",
+  "NP(B)",
+  "NP(S)",
+  "Wechat",
+  "Lottery",
+  "deposit",
+  "withdraw",
+];
+
+const normalizePayType = (payType) => (payType === "Wholesale" ? "Selling" : payType);
+const payTypeLabel = (payType) => (payType === "Selling" ? "Selling / Wholesale" : payType);
+const isPayTypeMatch = (recordPayType, selectedPayType) => {
+  if (selectedPayType === "ทั้งหมด") return true;
+  if (selectedPayType === "Selling") return ["Selling", "Wholesale"].includes(recordPayType);
+  return recordPayType === selectedPayType;
+};
+
 function ReportPage() {
     const { data: session } = useSession();
     const router = useRouter();
     const [records, setRecords] = useState([]);
     const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
+    const [exportStartDate, setExportStartDate] = useState(() => new Date().toISOString().split("T")[0]);
+    const [exportEndDate, setExportEndDate] = useState(() => new Date().toISOString().split("T")[0]);
+    const [exportBranch, setExportBranch] = useState("ทั้งหมด");
+    const [exportType, setExportType] = useState("ทั้งหมด");
+    const [exportBranches, setExportBranches] = useState([]);
+    const [isExporting, setIsExporting] = useState(false);
+    const [exportMessage, setExportMessage] = useState("");
     const [selectedBranch, setSelectedBranch] = useState("ทั้งหมด");
     const [selectedEmployee, setSelectedEmployee] = useState("ทั้งหมด");
     const [selectedType, setSelectedType] = useState("ทั้งหมด");
@@ -64,7 +90,7 @@ function ReportPage() {
 
         setRecords(fetchedRecords);
         setBranches(Array.from(new Set(fetchedRecords.map((r) => r.branch).filter(Boolean))));
-        setTypes(Array.from(new Set(fetchedRecords.map((r) => r.payType).filter(Boolean))));
+        setTypes(Array.from(new Set(fetchedRecords.map((r) => normalizePayType(r.payType)).filter(Boolean))));
         setHasLoaded(true);
       } catch (error) {
         console.error("Error fetching records:", error);
@@ -91,7 +117,7 @@ function ReportPage() {
     const filtered = records.filter((r) => {
       const branchMatch = selectedBranch === "ทั้งหมด" || r.branch === selectedBranch;
       const employeeMatch = selectedEmployee === "ทั้งหมด" || r.employee === selectedEmployee;
-      const typeMatch = selectedType === "ทั้งหมด" || r.payType === selectedType;
+      const typeMatch = isPayTypeMatch(r.payType, selectedType);
       return branchMatch && employeeMatch && typeMatch;
     });
 
@@ -125,6 +151,65 @@ function ReportPage() {
       }
     };
 
+    const downloadBlob = (blob, filename) => {
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    };
+
+    const getFilenameFromDisposition = (disposition) => {
+      const match = disposition?.match(/filename="?([^"]+)"?/i);
+      return match?.[1] || `receipts-${exportStartDate}-to-${exportEndDate}.html`;
+    };
+
+    const exportReceipts = async () => {
+      if (!exportStartDate || !exportEndDate) {
+        setExportMessage("กรุณาเลือกช่วงวันที่สำหรับบันทึกใบเสร็จ");
+        return;
+      }
+
+      if (exportStartDate > exportEndDate) {
+        setExportMessage("วันที่เริ่มต้นต้องไม่เกินวันที่สิ้นสุด");
+        return;
+      }
+
+      setIsExporting(true);
+      setExportMessage("");
+
+      try {
+        const params = new URLSearchParams({
+          startDate: exportStartDate,
+          endDate: exportEndDate,
+        });
+        if (exportBranch !== "ทั้งหมด") params.set("branch", exportBranch);
+        if (exportType !== "ทั้งหมด") params.set("payType", exportType);
+
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/receipts/export?${params.toString()}`,
+          { cache: "no-store" }
+        );
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.message || "บันทึกใบเสร็จไม่สำเร็จ");
+        }
+
+        const blob = await res.blob();
+        downloadBlob(blob, getFilenameFromDisposition(res.headers.get("content-disposition")));
+        setExportMessage("ดาวน์โหลดไฟล์ใบเสร็จเรียบร้อยแล้ว");
+      } catch (error) {
+        console.error("Error exporting receipts:", error);
+        setExportMessage(error.message || "บันทึกใบเสร็จไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+      } finally {
+        setIsExporting(false);
+      }
+    };
+
     useEffect(() => {
       if (!session) {
         redirect(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/login`);
@@ -145,6 +230,24 @@ function ReportPage() {
       }
     }, [session]);
 
+    useEffect(() => {
+      if (!session || session?.user?.role !== "admin") return;
+
+      const loadBranches = async () => {
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/branches`, {
+            cache: "no-store",
+          });
+          const data = await res.json();
+          setExportBranches(Array.isArray(data.branches) ? data.branches.filter(Boolean) : []);
+        } catch (error) {
+          console.error("Error loading export branches:", error);
+        }
+      };
+
+      loadBranches();
+    }, [session]);
+
   return (
     <>
       <div className="hidden md:block">
@@ -161,6 +264,77 @@ function ReportPage() {
               พิมพ์รายงาน
             </button>
           </div>
+        </div>
+        <div className="border rounded-lg p-6 bg-white shadow-sm mb-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">บันทึกใบเสร็จเป็นไฟล์</h2>
+            <p className="text-sm text-gray-600">
+              เลือกช่วงวันที่ สาขา และประเภท เพื่อดาวน์โหลดไฟล์ใบเสร็จจากหน้า receipt
+            </p>
+          </div>
+          <div className="flex flex-wrap items-end gap-4">
+            <label className="flex flex-col text-sm font-medium">
+              วันที่เริ่มต้น:
+              <input
+                type="date"
+                className="border p-2 rounded w-36 h-10"
+                value={exportStartDate}
+                onChange={(e) => setExportStartDate(e.target.value)}
+              />
+            </label>
+            <label className="flex flex-col text-sm font-medium">
+              วันที่สิ้นสุด:
+              <input
+                type="date"
+                className="border p-2 rounded w-36 h-10"
+                value={exportEndDate}
+                onChange={(e) => setExportEndDate(e.target.value)}
+              />
+            </label>
+            <label className="flex flex-col text-sm font-medium">
+              สาขา:
+              <select
+                className="border p-2 rounded w-36 h-10"
+                value={exportBranch}
+                onChange={(e) => setExportBranch(e.target.value)}
+              >
+                <option>ทั้งหมด</option>
+                {exportBranches.map((branch) => (
+                  <option key={branch}>{branch}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col text-sm font-medium">
+              ประเภท:
+              <select
+                className="border p-2 rounded w-36 h-10"
+                value={exportType}
+                onChange={(e) => setExportType(e.target.value)}
+              >
+                <option>ทั้งหมด</option>
+                {PAY_TYPE_OPTIONS.map((type) => (
+                  <option key={type} value={type}>{payTypeLabel(type)}</option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={exportReceipts}
+              disabled={isExporting || !exportStartDate || !exportEndDate}
+              className={`h-10 rounded px-4 font-semibold text-white ${
+                isExporting || !exportStartDate || !exportEndDate
+                  ? "cursor-not-allowed bg-gray-400"
+                  : "bg-green-600 hover:bg-green-700"
+              }`}
+            >
+              {isExporting ? "กำลังบันทึก..." : "บันทึกใบเสร็จ"}
+            </button>
+          </div>
+          {exportMessage && (
+            <div className="mt-4 text-sm text-gray-700">
+              {exportMessage}
+            </div>
+          )}
         </div>
         <div className="border rounded-lg p-6 bg-white shadow-sm">
           <div className="flex flex-wrap items-end gap-4 mb-4">
@@ -229,7 +403,7 @@ function ReportPage() {
               >
                 <option>ทั้งหมด</option>
                 {types.map((t) => (
-                  <option key={t}>{t}</option>
+                  <option key={t} value={t}>{payTypeLabel(t)}</option>
                 ))}
               </select>
             </label>
