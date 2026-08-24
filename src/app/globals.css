@@ -1,3 +1,48 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.moneymate-logo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #111827;
+  line-height: 1;
+}
+
+.moneymate-logo.logo-light {
+  color: #ffffff;
+}
+
+.moneymate-logo__mark {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  object-fit: contain;
+}
+
+.moneymate-logo__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.moneymate-logo__word {
+  color: currentColor;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.moneymate-logo__mate {
+  color: #f58220;
+}
+
+.moneymate-logo__country {
+  color: currentColor;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  line-height: 1;
+}

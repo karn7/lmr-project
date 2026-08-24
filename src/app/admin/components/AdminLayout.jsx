@@ -4,9 +4,8 @@ import { useState } from 'react';
 import SideNav from './SideNav';
 import { Bars3Icon } from '@heroicons/react/24/outline';
 import { useSession, signOut } from 'next-auth/react';
-import Image from 'next/image';
-import Logo from '../../../../public/lmr.png';
 import { useRouter } from 'next/navigation';
+import MoneyMateLogo from '../../components/MoneyMateLogo';
 
 export default function AdminLayout({ children }) {
   const [showSideNav, setShowSideNav] = useState(false);
@@ -18,12 +17,7 @@ export default function AdminLayout({ children }) {
     <div className="relative md:flex">
       {/* แถบบนมือถือ */}
       <div className="p-4 md:hidden flex justify-between items-center border-b">
-        <Image
-          src={Logo}
-          alt="LMR Logo"
-          className="h-8 w-auto cursor-pointer"
-          onClick={() => router.push('/admin')}
-        />
+        <MoneyMateLogo className="cursor-pointer" onClick={() => router.push('/admin')} />
         <button onClick={() => setShowSideNav(!showSideNav)} className="text-gray-700">
           <Bars3Icon className="h-6 w-6" />
         </button>

@@ -1,14 +1,13 @@
 "use client"
-import Image from "next/image";
 import React, { useState } from 'react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import Container from '../components/Container'
 import Link from 'next/link'
-import Vercel from "../../../public/lmr.png";
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import MoneyMateLogo from '../components/MoneyMateLogo'
 
 function LoginPage() {
 
@@ -48,7 +47,7 @@ function LoginPage() {
             <div className='flex-grow'>
                 <div className='flex justify-center items-center'>
                     <div className='w-[400px] shadow-xl p-10 mt-5 rounded-xl'>
-                    <div className="flex justify-center my-10"><Image src={Vercel} width={300} height={0} alt="LMR logo" /></div>
+                    <div className="flex justify-center my-10"><MoneyMateLogo /></div>
                         <h3 className='text-3xl'>Login</h3>
                         <hr className='my-3' />
                         <form onSubmit={handleSubmit}>
