@@ -3,6 +3,7 @@ import Record from "../../../../../models/record";
 import Customer from "../../../../../models/Customer";
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
+import mongoose from "mongoose";
 
 export async function GET(req, { params }) {
   try {
@@ -16,7 +17,8 @@ export async function GET(req, { params }) {
 
     await connectMongoDB();
 
-    const record = await Record.findOne({ docNumber: params.docNumber }).lean(); // 👈 ใช้ docNumber แทน _id
+    const { docNumber } = await params;
+    const record = await Record.findOne(mongoose.isValidObjectId(docNumber) ? { _id: docNumber } : { docNumber }).lean();
     if (!record) {
       return NextResponse.json({ message: "Record not found" }, { status: 404 });
     }

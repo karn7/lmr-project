@@ -46,7 +46,7 @@ function ReportPage() {
     const [selectedType, setSelectedType] = useState("ทั้งหมด");
     const [branches, setBranches] = useState([]);
     const [types, setTypes] = useState([]);
-    const [sortKey, setSortKey] = useState(null);
+    const [sortKey, setSortKey] = useState('createdAt');
     const [sortOrder, setSortOrder] = useState("asc");
     const [selectedRow, setSelectedRow] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -263,6 +263,10 @@ function ReportPage() {
             >
               พิมพ์รายงาน
             </button>
+            <button
+              onClick={() => router.push('/admin/report/batch-records')}
+              className="bg-green-700 hover:bg-green-800 text-white font-semibold py-2 px-4 rounded"
+            >เพิ่มบิลย้อนหลังหลายรายการ</button>
           </div>
         </div>
         <div className="border rounded-lg p-6 bg-white shadow-sm mb-6">
@@ -458,7 +462,7 @@ function ReportPage() {
                       className="text-blue-600"
                       onClick={() =>
                         window.open(
-                          `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/report/daily/dailylist/${r.docNumber}`,
+                          `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/report/daily/dailylist/${r._id}`,
                           "_blank"
                         )
                       }
@@ -511,7 +515,7 @@ function ReportPage() {
                           onClick={(e) => {
                             e.stopPropagation();
                             window.open(
-                              `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/report/daily/dailylist/${r.docNumber}`,
+                              `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/report/daily/dailylist/${r._id}`,
                               "_blank"
                             );
                           }}

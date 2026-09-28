@@ -27,6 +27,10 @@ function normalizeIdNumber(idNumber) {
   return String(idNumber || "").replace(/[\s-]+/g, "").toUpperCase();
 }
 
+function escapeRegExp(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 // GET /api/customers
 // - Find single:   /api/customers?idType=passport&idNumber=AB123456
 // - Search/list:   /api/customers?q=jo&page=1&limit=20
@@ -61,12 +65,18 @@ export async function GET(req) {
 
     const filter = {};
     if (q) {
-      const regex = new RegExp(q.trim().replace(/\s+/g, ".*"), "i");
+      const namePattern = q
+        .trim()
+        .split(/\s+/)
+        .map(escapeRegExp)
+        .join(".*");
+      const normalizedId = normalizeIdNumber(q);
+      const regex = new RegExp(namePattern, "i");
       Object.assign(filter, {
         $or: [
           { fullName: regex },
-          { idNumber: new RegExp(q.replace(/\s|-+/g, ""), "i") },
-          { nationality: new RegExp(`^${q}$`, "i") },
+          { idNumber: new RegExp(escapeRegExp(normalizedId), "i") },
+          { nationality: new RegExp(`^${escapeRegExp(q.trim())}$`, "i") },
         ],
       });
     }
@@ -91,7 +101,7 @@ export async function GET(req) {
 }
 
 // POST /api/customers
-// Body: { fullName, nationality, idType, idNumber, branch?, createdBy?, notes?, isActive? }
+// Body: customer profile collected from a transaction terminal
 export async function POST(req) {
   try {
     await dbConnect();
@@ -102,10 +112,15 @@ export async function POST(req) {
       nationality,
       idType,
       idNumber,
+      contactInfo = null,
       branch = "",
       createdBy = "",
       notes = "",
       isActive = true,
+      customerStatus = "active",
+      riskStatus = "normal",
+      documentExpiresAt = null,
+      dataCollectedAt = null,
     } = body || {};
 
     if (!fullName || !nationality || !idType || !idNumber) {
@@ -121,10 +136,15 @@ export async function POST(req) {
       nationality: String(nationality).toUpperCase().trim(),
       idType,
       idNumber: normalizeIdNumber(idNumber),
+      contactInfo,
       branch: String(branch || ""),
       createdBy: String(createdBy || ""),
       notes: String(notes || ""),
       isActive: Boolean(isActive),
+      customerStatus: String(customerStatus || "active"),
+      riskStatus: String(riskStatus || "normal"),
+      documentExpiresAt: documentExpiresAt || null,
+      dataCollectedAt: dataCollectedAt || null,
     };
 
     // Attempt create

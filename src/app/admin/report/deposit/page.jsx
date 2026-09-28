@@ -3,6 +3,47 @@
 import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
+function DepositList({ records }) {
+  if (!records.length) return <p className="p-4 text-center text-gray-500">ไม่พบรายการ</p>;
+
+  return (
+    <ol className="divide-y">
+      {records.map((record) => {
+        const depositItems = (record.items ?? []).filter((item) => item.unit?.trim().toLowerCase() === "deposit");
+        const feeItems = (record.items ?? []).filter((item) => item.unit?.trim().toLowerCase() === "fee" && Number(item.total) > 0);
+        return (
+        <li key={record._id} className="p-4 bg-white">
+          <div className="flex flex-wrap justify-between gap-2">
+            <time dateTime={record.createdAt} className="text-sm text-gray-600">
+              {new Date(record.createdAt).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "medium" })}
+            </time>
+            <span className="text-sm font-medium">{record.receiveMethodNote || "ไม่ระบุช่องทาง"}</span>
+          </div>
+          <div className="flex flex-wrap justify-between gap-2 mt-2">
+            <span className="font-medium break-all">{record.docNumber || "ไม่มีเลขที่เอกสาร"}</span>
+            <div className="font-semibold text-right text-green-600">
+              {depositItems.length ? depositItems.map((item, index) => (
+                <p key={index}>ยอดโอน: {(Number(item.total) || 0).toLocaleString("th-TH", { maximumFractionDigits: 2 })} {item.currency || ""}</p>
+              )) : (
+                <p>ยอดโอน: {(record.total ?? 0).toLocaleString("th-TH", { maximumFractionDigits: 2 })}</p>
+              )}
+            </div>
+          </div>
+          {feeItems.map((fee, index) => (
+            <p key={index} className="text-sm mt-1 text-right text-gray-600">
+              ค่าธรรมเนียม (Fee): {(Number(fee.total) || 0).toLocaleString("th-TH", { maximumFractionDigits: 2 })} {fee.currency || ""}
+            </p>
+          ))}
+          <p className="text-sm mt-2 break-words">ลูกค้า: {record.customerName || "-"}</p>
+          <p className="text-sm text-gray-600 break-words">สาขา: {record.branch || "-"} · พนักงาน: {record.employee || "-"}</p>
+          {record.note && <p className="text-sm mt-1 whitespace-pre-wrap break-words">หมายเหตุ: {record.note}</p>}
+        </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 function DepositReportInner() {
   const router = useRouter();
   const params = useSearchParams();
@@ -15,6 +56,10 @@ function DepositReportInner() {
   const [branches, setBranches] = useState([]);
   const [data, setData] = useState({ summary: { count: 0, sumTotal: 0 }, byNote: [] });
   const [loading, setLoading] = useState(false);
+  const [view, setView] = useState("channels");
+  const records = data?.records ?? [];
+  const channelOf = (record) => (record.receiveMethodNote || "").trim().toUpperCase();
+  const otherRecords = records.filter((record) => !["NOUKKY", "BECOME"].includes(channelOf(record)));
 
   const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
@@ -138,7 +183,7 @@ function DepositReportInner() {
         <div className="bg-white border rounded p-4">
           <div className="text-gray-500 text-sm">ยอดรวมช่วงนี้</div>
           <div className="text-2xl font-bold">
-            {(data?.summary?.sumTotal ?? 0).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+            {(data?.summary?.sumTotal ?? 0).toLocaleString("th-TH", { maximumFractionDigits: 2 })}
           </div>
         </div>
         <div className="bg-white border rounded p-4">
@@ -169,13 +214,61 @@ function DepositReportInner() {
                 <td className="border px-3 py-2">{r.receiveMethodNote}</td>
                 <td className="border px-3 py-2 text-right">{r.count}</td>
                 <td className="border px-3 py-2 text-right">
-                  {(r.sumTotal ?? 0).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
+                  {(r.sumTotal ?? 0).toLocaleString("th-TH", { maximumFractionDigits: 2 })}
                 </td>
               </tr>
             ))
           )}
         </tbody>
       </table>
+
+      <section className="mt-8" aria-label="รายการโอนเงิน">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 className="text-lg font-semibold">รายการโอนเงิน ({records.length})</h2>
+          <div className="flex gap-2" role="group" aria-label="มุมมองรายการ">
+            {[
+              ["channels", "แยก NOUKKY / BECOME"],
+              ["timeline", "เรียงตามเวลา"],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={view === value}
+                onClick={() => setView(value)}
+                className={`border rounded px-3 py-2 text-sm ${view === value ? "bg-blue-600 text-white border-blue-600" : "bg-white hover:bg-gray-100"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="text-sm text-gray-500 mb-3">เรียงตามเวลาเก่าไปใหม่</p>
+        {view === "channels" ? (
+          <>
+            <div className="grid grid-cols-2 gap-3 md:gap-4">
+              {["NOUKKY", "BECOME"].map((channel) => {
+                const channelRecords = records.filter((record) => channelOf(record) === channel);
+                return (
+                  <div key={channel} className="min-w-0 border rounded overflow-hidden">
+                    <h3 className="bg-gray-100 p-3 font-semibold">{channel} ({channelRecords.length})</h3>
+                    <DepositList records={channelRecords} />
+                  </div>
+                );
+              })}
+            </div>
+            {otherRecords.length > 0 && (
+              <div className="border rounded overflow-hidden mt-4">
+                <h3 className="bg-gray-100 p-3 font-semibold">ช่องทางอื่น / ไม่ระบุ ({otherRecords.length})</h3>
+                <DepositList records={otherRecords} />
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="border rounded overflow-hidden">
+            <DepositList records={records} />
+          </div>
+        )}
+      </section>
     </div>
   );
 }

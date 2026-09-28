@@ -14,6 +14,9 @@ export default function Page({ params }) {
   const [isDeletingCustomerSignature, setIsDeletingCustomerSignature] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editableRecord, setEditableRecord] = useState(null);
+  const [customerSearch, setCustomerSearch] = useState({ field: "", query: "" });
+  const [customerSuggestions, setCustomerSuggestions] = useState([]);
+  const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
   const [docLogData, setDocLogData] = useState([]);
   const [showEmployeeSignature, setShowEmployeeSignature] = useState(true);
   const [showCustomerSignature, setShowCustomerSignature] = useState(true);
@@ -93,7 +96,39 @@ export default function Page({ params }) {
     fetchRecord();
   }, [docNumber, session?.user?.role, status]);
 
+  useEffect(() => {
+    const query = customerSearch.query.trim();
+    if (!isEditing || query.length < 2) {
+      setCustomerSuggestions([]);
+      setIsSearchingCustomer(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setIsSearchingCustomer(true);
+      try {
+        const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+        const res = await fetch(`${base}/api/customers?q=${encodeURIComponent(query)}&limit=8`, {
+          signal: controller.signal,
+        });
+        const data = await res.json();
+        setCustomerSuggestions(res.ok ? data.items || [] : []);
+      } catch (err) {
+        if (err.name !== "AbortError") setCustomerSuggestions([]);
+      } finally {
+        if (!controller.signal.aborted) setIsSearchingCustomer(false);
+      }
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [customerSearch, isEditing]);
+
   async function updateCashOnDeleteOnly() {
+    if (record?.batchId) return; // Batch reversals are handled atomically by the delete API.
     if (cashUpdated.current) {
       console.log("⛔ updateCashOnDeleteOnly() ถูกบล็อก ไม่ให้ทำซ้ำ");
       return;
@@ -133,6 +168,7 @@ export default function Page({ params }) {
             body: JSON.stringify({
               shiftNo: record.shiftNo,
               docNumber: record.docNumber,
+              recordId: record._id,
               // ใช้ชื่อพนักงานในรายการ (หรือ user) เพื่อความสอดคล้องกับของเดิม
               employee: record.employee || (record?.user?.name ?? ""),
               date: record.date,
@@ -270,6 +306,7 @@ export default function Page({ params }) {
             body: JSON.stringify({
               shiftNo: record.shiftNo,
               docNumber: record.docNumber,
+              recordId: record._id,
               employee: record.employee || (record?.user?.name ?? ""),
               date: record.date,
               ...update,
@@ -337,6 +374,20 @@ export default function Page({ params }) {
     setIsDeleting(true);
     try {
       const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+      if (record.batchId) {
+        const cashMessage = record.batchCashMode === 'adjust-shift'
+          ? 'ระบบจะย้อนยอดเงินที่บิลนี้เคยปรับไว้ในกะเดิม พร้อมเก็บประวัติการลบ'
+          : 'บิลนี้เพิ่มโดยไม่ปรับยอดกะ การลบจะไม่เปลี่ยนยอดเงินของกะ';
+        if (!confirm(`ต้องการลบบิล ${record.docNumber} หรือไม่?\n${cashMessage}`)) return;
+        const response = await fetch(`${base}/api/record/delete`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ docNumber: record.docNumber, recordId: record._id }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'ลบรายการไม่สำเร็จ');
+        router.push('/admin/report/daily');
+        return;
+      }
       const dateParam = record.date || new Date(record.createdAt).toISOString().slice(0, 10);
       console.log("🔍 ตรวจสอบกะด้วยค่า:", {
         shiftNo: record.shiftNo,
@@ -497,7 +548,7 @@ export default function Page({ params }) {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ docNumber: record.docNumber }),
+          body: JSON.stringify({ docNumber: record.docNumber, recordId: record._id }),
         });
         if (!resDelete.ok) {
           alert("ลบรายการไม่สำเร็จ");
@@ -519,7 +570,7 @@ export default function Page({ params }) {
     setIsDeletingCustomerSignature(true);
     try {
       const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
-      const res = await fetch(`${base}/api/record/${record.docNumber}/signature/image`, {
+      const res = await fetch(`${base}/api/record/${record._id}/signature/image`, {
         method: "DELETE",
       });
       const data = await res.json().catch(() => ({}));
@@ -554,6 +605,12 @@ export default function Page({ params }) {
       _id: record._id,
       // For timeOnly, use createdAt
       timeOnly: getTimeOnly(record.createdAt),
+      customer: {
+        ...(record.customer || {}),
+        nationality: record.customer?.nationality || record.nationality || "",
+        idNumber: record.customer?.idNumber || record.customerId || "",
+      },
+      selectedCustomerId: record.customer?._id || "",
       // Deep clone items for safety, support add if no items
       items:
         record.items && record.items.length > 0
@@ -569,17 +626,53 @@ export default function Page({ params }) {
             ],
     });
     setIsEditing(true);
+    setCustomerSearch({ field: "", query: "" });
+    setCustomerSuggestions([]);
   }
 
   // Handler for cancel edit
   function handleCancelEdit() {
     setIsEditing(false);
     setEditableRecord(null);
+    setCustomerSearch({ field: "", query: "" });
+    setCustomerSuggestions([]);
+  }
+
+  function selectCustomer(customer) {
+    setEditableRecord((prev) => ({
+      ...prev,
+      customerName: customer.fullName || "",
+      selectedCustomerId: customer.id,
+      customer: {
+        ...prev.customer,
+        idType: customer.idType,
+        idNumber: customer.idNumber || "",
+        nationality: customer.nationality || "",
+      },
+    }));
+    setCustomerSearch({ field: "", query: "" });
+    setCustomerSuggestions([]);
   }
 
   // Handler for save edit
   async function handleSaveEdit() {
     try {
+      const customerNationality = String(editableRecord.customer?.nationality || "")
+        .trim()
+        .toUpperCase();
+      const customerIdNumber = String(editableRecord.customer?.idNumber || "")
+        .replace(/[\s-]+/g, "")
+        .toUpperCase();
+
+      if (!/^[A-Z]{2}$/.test(customerNationality)) {
+        alert("สัญชาติต้องเป็นรหัสประเทศ 2 ตัวอักษร เช่น TH, LA, US");
+        return;
+      }
+      if (customerIdNumber.length < 4) {
+        alert("กรุณากรอกเลขบัตร/พาสปอร์ตอย่างน้อย 4 ตัวอักษร");
+        return;
+      }
+
       // Recalculate totals, ensure amount, rate, total are numeric and total is rounded to 2 decimal places
       let newTotal = 0;
       const updatedItems = editableRecord.items.map((item) => {
@@ -597,18 +690,23 @@ export default function Page({ params }) {
       const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
       // Compose payload
       const payload = {
-  _id: updatedRecord._id,
-  docNumber: updatedRecord.docNumber,
-  payType: updatedRecord.payType,
-  payMethod: updatedRecord.payMethod,
-  receiveMethod: updatedRecord.receiveMethod,
-  createdAt: updatedRecord.createdAt,
-  customerName: updatedRecord.customerName,
-  items: updatedRecord.items,
-  total: updatedRecord.total,
-};
+        _id: updatedRecord._id,
+        docNumber: updatedRecord.docNumber,
+        expectedDocNumber: record.docNumber,
+        payType: updatedRecord.payType,
+        payMethod: updatedRecord.payMethod,
+        receiveMethod: updatedRecord.receiveMethod,
+        createdAt: updatedRecord.createdAt,
+        customerName: updatedRecord.customerName,
+        customerId: customerIdNumber,
+        originalCustomerId: record.customerId || record.customer?.idNumber,
+        nationality: customerNationality,
+        selectedCustomerId: updatedRecord.selectedCustomerId || undefined,
+        items: updatedRecord.items,
+        total: updatedRecord.total,
+      };
       console.log("📤 payload ที่จะส่ง:", payload);
-      const res = await fetch(`${base}/api/record/update`, {
+      let res = await fetch(`${base}/api/record/update`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -616,8 +714,57 @@ export default function Page({ params }) {
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        alert("บันทึกการแก้ไขไม่สำเร็จ");
-        return;
+        const errorData = await res.json().catch(() => ({}));
+        const customerLinkMissing =
+          res.status === 404 && errorData.message === "ไม่พบข้อมูลลูกค้าที่เชื่อมกับรายการ";
+
+        if (!customerLinkMissing) {
+          alert(errorData.message || "บันทึกการแก้ไขไม่สำเร็จ");
+          return;
+        }
+
+        const shouldCreate = confirm(
+          "ไม่พบข้อมูลลูกค้าที่เชื่อมกับรายการ\nต้องการเพิ่มข้อมูลลูกค้าใหม่หรือไม่?"
+        );
+        if (!shouldCreate) return;
+
+        const fullName = String(updatedRecord.customerName || "").trim();
+        if (!fullName) {
+          alert("กรุณากรอกชื่อลูกค้าก่อนเพิ่มข้อมูลใหม่");
+          return;
+        }
+
+        const inferredIdType =
+          updatedRecord.customer?.idType ||
+          (/^\d{13}$/.test(customerIdNumber) ? "thai_id" : "passport");
+        const createRes = await fetch(`${base}/api/customers`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fullName,
+            nationality: customerNationality,
+            idType: inferredIdType,
+            idNumber: customerIdNumber,
+            branch: record.branch || "",
+            createdBy: session?.user?.name || "",
+          }),
+        });
+        const createdCustomer = await createRes.json().catch(() => ({}));
+        if (!createRes.ok) {
+          alert(createdCustomer.message || "เพิ่มข้อมูลลูกค้าไม่สำเร็จ");
+          return;
+        }
+
+        res = await fetch(`${base}/api/record/update`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...payload, selectedCustomerId: createdCustomer.id }),
+        });
+        if (!res.ok) {
+          const retryError = await res.json().catch(() => ({}));
+          alert(retryError.message || "สร้างลูกค้าแล้ว แต่บันทึกรายการไม่สำเร็จ");
+          return;
+        }
       }
       // Refresh record
       const data = await res.json();
@@ -656,7 +803,7 @@ export default function Page({ params }) {
               const docNumber = record.docNumber;
               const total = record.total;
               window.open(
-                `${base}/printreceipt?docNumber=${docNumber}&total=${total}`,
+                `${base}/printreceipt?docNumber=${record._id}&total=${total}`,
                 "_blank",
                 "width=500,height=400"
               );
@@ -681,6 +828,15 @@ export default function Page({ params }) {
         </div>
       </div>
 
+      {(record.recordedAt || record.docNumberHistory?.length > 0) && (
+        <section className="mb-4 rounded border bg-blue-50 p-4 text-sm space-y-2">
+          <h2 className="font-semibold">ประวัติการบันทึกและเลขที่รายการ</h2>
+          {record.recordedAt && <p>บันทึกเข้าระบบ: {new Date(record.recordedAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })} โดย {record.recordedBy || '—'}</p>}
+          {record.batchId && <p>เพิ่มย้อนหลังเป็นชุด · เหตุผล: {record.note}</p>}
+          {record.docNumberHistory?.map((entry, index) => <p key={index}>{entry.from} → {entry.to} · {new Date(entry.changedAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })} · {entry.changedBy} · {entry.reason}</p>)}
+        </section>
+      )}
+
       {/* Edit button */}
       <div className="mb-4">
         {!isEditing && (
@@ -688,7 +844,7 @@ export default function Page({ params }) {
             className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
             onClick={handleEditClick}
           >
-            แก้ไขเวลา / ประเภท / รายการ
+            แก้ไขข้อมูลรายการ / ลูกค้า
           </button>
         )}
       </div>
@@ -779,9 +935,14 @@ export default function Page({ params }) {
     <input
       type="text"
       value={editableRecord?.customerName ?? ""}
-      onChange={e =>
-        setEditableRecord({ ...editableRecord, customerName: e.target.value })
-      }
+      onChange={e => {
+        setEditableRecord({
+          ...editableRecord,
+          customerName: e.target.value,
+          selectedCustomerId: "",
+        });
+        setCustomerSearch({ field: "name", query: e.target.value });
+      }}
       className="border rounded px-2 py-1"
       style={{ minWidth: 160 }}
     />
@@ -789,8 +950,80 @@ export default function Page({ params }) {
     record.customerName
   )}
 </p>
-        <p><strong>สัญชาติ:</strong> {customerNationality}</p>
-        <p><strong>{customerIdType}:</strong> {customerIdNumber}</p>
+        <p>
+          <strong>สัญชาติ:</strong>{" "}
+          {isEditing ? (
+            <input
+              type="text"
+              value={editableRecord?.customer?.nationality ?? ""}
+              onChange={e =>
+                setEditableRecord({
+                  ...editableRecord,
+                  customer: {
+                    ...editableRecord.customer,
+                    nationality: e.target.value.toUpperCase(),
+                  },
+                })
+              }
+              maxLength={2}
+              placeholder="TH"
+              className="border rounded px-2 py-1 uppercase"
+              style={{ width: 72 }}
+            />
+          ) : (
+            customerNationality
+          )}
+        </p>
+        <p>
+          <strong>{customerIdType}:</strong>{" "}
+          {isEditing ? (
+            <input
+              type="text"
+              value={editableRecord?.customer?.idNumber ?? ""}
+              onChange={e => {
+                setEditableRecord({
+                  ...editableRecord,
+                  selectedCustomerId: "",
+                  customer: {
+                    ...editableRecord.customer,
+                    idNumber: e.target.value,
+                  },
+                });
+                setCustomerSearch({ field: "id", query: e.target.value });
+              }}
+              className="border rounded px-2 py-1"
+              style={{ minWidth: 180 }}
+            />
+          ) : (
+            customerIdNumber
+          )}
+        </p>
+        {isEditing && customerSearch.field && (
+          <div className="my-2 max-w-xl rounded border bg-white shadow-sm">
+            <div className="px-3 py-2 text-sm text-gray-600">
+              {isSearchingCustomer
+                ? "กำลังค้นหาลูกค้า..."
+                : customerSuggestions.length > 0
+                ? "เลือกลูกค้าเพื่อเติมชื่อ เลขบัตร และสัญชาติอัตโนมัติ"
+                : customerSearch.query.trim().length >= 2
+                ? "ไม่พบข้อมูลลูกค้า"
+                : "พิมพ์อย่างน้อย 2 ตัวอักษรเพื่อค้นหา"}
+            </div>
+            {customerSuggestions.map((customer) => (
+              <button
+                key={customer.id}
+                type="button"
+                onClick={() => selectCustomer(customer)}
+                className="block w-full border-t px-3 py-2 text-left hover:bg-blue-50"
+              >
+                <span className="font-medium">{customer.fullName}</span>
+                <span className="ml-2 text-sm text-gray-600">
+                  {customer.idNumber} · {customer.nationality}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
         <p>
           <strong>ลูกค้าจ่ายเงินเป็น:</strong>{" "}
           {isEditing ? (
@@ -1083,7 +1316,7 @@ export default function Page({ params }) {
               <div className="flex h-32 items-end justify-center overflow-hidden border-b border-black">
                 {showCustomerSignature && (
                   <img
-                    src={`${basePath}/api/record/${record.docNumber}/signature/image`}
+                    src={`${basePath}/api/record/${record._id}/signature/image`}
                     alt="Customer Signature"
                     className="max-h-32 max-w-full object-contain"
                     onError={() => setShowCustomerSignature(false)}

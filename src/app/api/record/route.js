@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { connectMongoDB } from "../../../../lib/mongodb";
 import Record from "../../../../models/record";
 import generateDocNumber from "../../../../lib/generateDocNumber";
+import { withRecordNumbering } from "../../../../lib/record-numbering";
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(req) {
   try {
@@ -14,17 +17,23 @@ export async function POST(req) {
     } = await req.json();
     
     const prefix = recordData.payType === "Selling" ? "S" : recordData.payType === "Buying" ? "B" : "A";
-    const docNumber = await generateDocNumber(prefix, recordData.employee, employeeCode);
-
-    const newRecord = new Record({
-      ...recordData,
-      docNumber,
-      createdAt: new Date()
+    const saved = await withRecordNumbering(async (session) => {
+      const number = await generateDocNumber(prefix, recordData.employee, employeeCode, session);
+      const newRecord = new Record({
+        ...recordData,
+        employeeCode,
+        docNumber: number,
+        createdAt: new Date(),
+        recordedAt: new Date(),
+        recordedBy: recordData.employee,
+        batchId: undefined,
+        docNumberHistory: [],
+      });
+      await newRecord.save({ session });
+      return { docNumber: number, recordId: String(newRecord._id) };
     });
 
-    await newRecord.save();
-
-    return NextResponse.json({ message: "Record saved successfully", docNumber }, { status: 201 });
+    return NextResponse.json({ message: "Record saved successfully", ...saved }, { status: 201 });
 
   } catch (error) {
     console.error("❌ Error saving record:", error);
@@ -41,7 +50,7 @@ export async function GET(req) {
     const pipeline = [];
 
     if (date) {
-      const startDate = new Date(`${date}T00:00:00.000Z`);
+      const startDate = new Date(`${date}T00:00:00.000+07:00`);
       const endDate = new Date(startDate);
       endDate.setUTCDate(endDate.getUTCDate() + 1);
 
@@ -49,7 +58,7 @@ export async function GET(req) {
         $match: {
           $or: [
             { date },
-            { createdAt: { $gte: startDate, $lt: endDate } },
+            { date: { $in: [null, ""] }, createdAt: { $gte: startDate, $lt: endDate } },
           ],
         },
       });

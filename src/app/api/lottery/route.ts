@@ -94,6 +94,7 @@ export async function GET(req: Request) {
                   as: "it",
                   in: {
                     currency: "$$it.currency",
+                    rate: "$$it.rate",
                     amount: "$$it.amount",
                     total:  "$$it.total",
                   },

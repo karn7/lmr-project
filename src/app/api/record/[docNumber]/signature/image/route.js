@@ -1,4 +1,5 @@
 import { connectMongoDB } from "../../../../../../../lib/mongodb";
+import mongoose from "mongoose";
 import Record from "../../../../../../../models/record";
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
@@ -12,7 +13,8 @@ export async function GET(request, { params }) {
 
     await connectMongoDB();
 
-    const record = await Record.findOne({ docNumber: params.docNumber }).select(
+    const { docNumber } = await params;
+    const record = await Record.findOne(mongoose.isValidObjectId(docNumber) ? { _id: docNumber } : { docNumber }).select(
       "customerSignature"
     );
 
@@ -45,7 +47,8 @@ export async function DELETE(request, { params }) {
 
     await connectMongoDB();
 
-    const record = await Record.findOne({ docNumber: params.docNumber });
+    const { docNumber } = await params;
+    const record = await Record.findOne(mongoose.isValidObjectId(docNumber) ? { _id: docNumber } : { docNumber });
     if (!record) {
       return NextResponse.json({ message: "ไม่พบรายการ" }, { status: 404 });
     }

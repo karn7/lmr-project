@@ -1,127 +1,46 @@
-import { NextResponse } from "next/server";
-import Shift from "../../../../../models/shift";
-import AdjustmentLog from "../../../../../models/adjustmentLog";
-import { connectMongoDB } from "../../../../../lib/mongodb";
-import mongoose from "mongoose";
+import { NextResponse } from 'next/server';
+import Shift from '../../../../../models/shift';
+import Record from '../../../../../models/record';
+import AdjustmentLog from '../../../../../models/adjustmentLog';
+import { withRecordNumbering } from '../../../../../lib/record-numbering';
 
 export async function POST(req) {
   try {
-    await connectMongoDB();
-
-    const { docNumber, totalTHB, totalLAK, currency, amount, action, shiftNo, employee } = await req.json();
-
-    const today = new Date().toISOString().slice(0, 10); // yyyy-mm-dd
-
-    const shift = await Shift.findOne({
-      date: today,
-      shiftNo,
-      employee,
-      closedAt: null,
-      isDeleted: { $ne: true },
+    const { docNumber, recordId, totalTHB, totalLAK, currency, amount, action, shiftNo, employee } = await req.json();
+    if (!['increase', 'decrease'].includes(action)) return NextResponse.json({ message: 'Invalid action' }, { status: 400 });
+    const changes = [];
+    if (totalTHB !== undefined) changes.push({ currency: 'THB', amount: Number(totalTHB) });
+    if (totalLAK !== undefined) changes.push({ currency: 'LAK', amount: Number(totalLAK) });
+    if (currency && amount !== undefined) changes.push({ currency, amount: Number(amount) });
+    if (!changes.length || changes.some((c) => !Number.isFinite(c.amount) || c.amount < 0 || !c.currency || /[.$]/.test(c.currency) || ['__proto__', 'constructor', 'prototype'].includes(c.currency))) {
+      return NextResponse.json({ message: 'Invalid cash amount or currency' }, { status: 400 });
+    }
+    const result = await withRecordNumbering(async (session) => {
+      // Use the immutable ID when a backdated insertion has moved the document number.
+      const record = recordId ? await Record.findById(recordId).session(session) : null;
+      if (recordId && !record) return { status: 404, message: 'Record not found' };
+      const currentDocNumber = record?.docNumber || docNumber;
+      const shift = await Shift.findOne({ date: new Date().toISOString().slice(0, 10), shiftNo, employee, closedAt: null, isDeleted: { $ne: true } }).session(session);
+      if (!shift) return { status: 404, message: 'No open shift found' };
+      if (record && (record.employee !== employee || String(record.shiftNo) !== String(shiftNo) || record.branch !== shift.branch)) {
+        return { status: 409, message: 'Record does not belong to this shift' };
+      }
+      const updated = { ...shift.cashBalance };
+      const logs = [];
+      for (const change of changes) {
+        const beforeAmount = Number(updated[change.currency]) || 0;
+        const afterAmount = Math.round((beforeAmount + (action === 'increase' ? 1 : -1) * change.amount) * 100) / 100;
+        updated[change.currency] = afterAmount;
+        logs.push({ createdAt: new Date(), docNumber: currentDocNumber, shiftNo, employee, action, currency: change.currency, amount: change.amount, beforeAmount, afterAmount });
+      }
+      shift.cashBalance = updated;
+      await shift.save({ session });
+      await AdjustmentLog.insertMany(logs, { session });
+      return { status: 200, message: 'Shift cash updated successfully' };
     });
-
-    if (!shift) {
-      return NextResponse.json({ message: "No open shift found" }, { status: 404 });
-    }
-
-
-    // อัปเดตยอดเงินใน cashBalance
-    const updated = { ...shift.cashBalance };
-
-    if (!["increase", "decrease"].includes(action)) {
-      return NextResponse.json({ message: "Invalid action" }, { status: 400 });
-    }
-
-    const sign = action === "increase" ? 1 : -1;
-    if (totalTHB !== undefined) {
-      updated.THB = (parseFloat(updated.THB) || 0) + sign * parseFloat(totalTHB);
-    }
-
-    if (totalLAK !== undefined) {
-      updated.LAK = (parseFloat(updated.LAK) || 0) + sign * parseFloat(totalLAK);
-    }
-
-    let beforeAmountOther = 0;
-    if (currency && amount !== undefined) {
-      beforeAmountOther = parseFloat(shift.cashBalance?.[currency]) || 0;
-      updated[currency] = (parseFloat(updated[currency]) || 0) + sign * parseFloat(amount);
-    }
-
-
-    // บันทึกกลับ
-    shift.cashBalance = updated;
-    const saveResult = await shift.save();
-
-    if (!saveResult || !saveResult._id) {
-      await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/Notification`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          docNumber,
-          employee,
-          message: `❗เกิดข้อผิดพลาดในการบันทึกยอดเงินสดของ shift: ${docNumber}`,
-          type: "systemError",
-        }),
-      });
-
-      return NextResponse.json({ message: "บันทึกยอดเงินสดไม่สำเร็จ" }, { status: 500 });
-    }
-
-    // Log การปรับยอดเงินสดลง MongoDB
-    // Log สำหรับ THB
-    if (totalTHB !== undefined) {
-      const before = parseFloat(shift.cashBalance?.THB) || 0;
-      const after = before + sign * parseFloat(totalTHB);
-      await AdjustmentLog.create({
-        createdAt: new Date(),
-        docNumber,
-        shiftNo,
-        employee,
-        action,
-        currency: "THB",
-        amount: parseFloat(totalTHB),
-        beforeAmount: before,
-        afterAmount: after
-      });
-    }
-
-    // Log สำหรับ LAK
-    if (totalLAK !== undefined) {
-      const before = parseFloat(shift.cashBalance?.LAK) || 0;
-      const after = before + sign * parseFloat(totalLAK);
-      await AdjustmentLog.create({
-        createdAt: new Date(),
-        docNumber,
-        shiftNo,
-        employee,
-        action,
-        currency: "LAK",
-        amount: parseFloat(totalLAK),
-        beforeAmount: before,
-        afterAmount: after
-      });
-    }
-
-    // Log สำหรับสกุลอื่น ๆ (ถ้ามี)
-    if (currency && amount !== undefined) {
-      await AdjustmentLog.create({
-        createdAt: new Date(),
-        docNumber,
-        shiftNo,
-        employee,
-        action,
-        currency,
-        amount: parseFloat(amount),
-        beforeAmount: beforeAmountOther,
-        afterAmount: parseFloat(updated?.[currency]) || 0
-      });
-    }
-
-    return NextResponse.json({ message: "Shift cash updated successfully" });
+    return NextResponse.json({ message: result.message }, { status: result.status });
   } catch (error) {
-    console.error("Error updating shift cash:", error);
-    return NextResponse.json({ message: "Server error" }, { status: 500 });
+    console.error('Error updating shift cash:', error);
+    return NextResponse.json({ message: 'Server error' }, { status: 500 });
   }
 }

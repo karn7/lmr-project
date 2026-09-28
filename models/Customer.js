@@ -20,12 +20,19 @@ const customerSchema = new Schema(
     },
     idType: { type: String, required: true, enum: ALLOWED_ID_TYPES },
     idNumber: { type: String, required: true, trim: true, minlength: 4, maxlength: 64 },
+    // ข้อมูลติดต่ออาจมาจากเครื่องทำรายการในรูป string หรือ object
+    // ใช้ Mixed เพื่อคงรูปแบบข้อมูลเดิมไว้ครบถ้วน
+    contactInfo: { type: Schema.Types.Mixed, default: null },
 
     // optional metadata
     branch: { type: String, trim: true, default: "" },
     createdBy: { type: String, trim: true, default: "" },
     notes: { type: String, trim: true, maxlength: 1000, default: "" },
     isActive: { type: Boolean, default: true },
+    customerStatus: { type: String, trim: true, default: "active" },
+    riskStatus: { type: String, trim: true, default: "normal" },
+    documentExpiresAt: { type: Date, default: null },
+    dataCollectedAt: { type: Date, default: null },
 
     // OPTIONAL denormalized fields (ไม่ใช่แหล่งความจริง)
     lastPurpose: { type: String, trim: true, maxlength: 200, default: "" }, // ใช้เพื่อ autofill UI ได้, ไม่บังคับ

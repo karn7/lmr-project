@@ -1,7 +1,10 @@
 "use client";
 
-import React, { useEffect, useState, Suspense } from "react";
+import React, { useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { summarizeLottery } from "../../../../../lib/lottery-report.mjs";
+
+const money = (value) => value.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function LotteryReportInner() {
   const router = useRouter();
@@ -14,6 +17,11 @@ function LotteryReportInner() {
   const [branches, setBranches] = useState([]);
   const [data, setData] = useState({ summary: { count: 0, sumTotal: 0 }, rows: [], perCurrency: [] });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [calculated, setCalculated] = useState(false);
+  const requestId = useRef(0);
+  const groups = summarizeLottery(data?.rows ?? []);
+  const canCalculate = (data?.rows ?? []).length > 0 && groups.every((g) => !g.invalid && (g.percent !== null || g.count === 0));
 
   const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
@@ -35,7 +43,10 @@ function LotteryReportInner() {
   }, []);
 
   async function load() {
+    const id = ++requestId.current;
     setLoading(true);
+    setCalculated(false);
+    setError("");
     const qs = new URLSearchParams();
     if (branch) qs.set("branch", branch);
     if (date) qs.set("date", date);
@@ -45,10 +56,19 @@ function LotteryReportInner() {
       if (endDate) qs.set('end', endDate);
     }
     const url = `${base}/api/lottery?${qs.toString()}`;
-    const res = await fetch(url, { cache: "no-store" });
-    const json = await res.json();
-    setData(json);
-    setLoading(false);
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error("โหลดข้อมูลไม่สำเร็จ กรุณาลองอีกครั้ง");
+      const json = await res.json();
+      if (id === requestId.current) setData(json);
+    } catch (e) {
+      if (id === requestId.current) {
+        setError("โหลดข้อมูลไม่สำเร็จ กรุณาลองอีกครั้ง");
+        setData({ rows: [], perCurrency: [], summary: {} });
+      }
+    } finally {
+      if (id === requestId.current) setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -139,6 +159,8 @@ function LotteryReportInner() {
         </button>
       </div>
 
+      {error && <p role="alert" className="mb-4 text-red-600">{error}</p>}
+
       {/* Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-white border rounded p-4">
@@ -148,7 +170,7 @@ function LotteryReportInner() {
           </div>
         </div>
         <div className="bg-white border rounded p-4">
-          <div className="text-gray-500 text-sm">ผลรวมช่วงนี้</div>
+          <div className="text-gray-500 text-sm">ยอดจ่ายให้ลูกค้าช่วงนี้ (บาท)</div>
           <div className="text-2xl font-bold">
             {(data?.summary?.sumTotal ?? 0).toLocaleString("th-TH", { minimumFractionDigits: 2 })}
           </div>
@@ -161,6 +183,56 @@ function LotteryReportInner() {
           </div>
         </div>
       </div>
+
+      <section className="mb-6" aria-busy={loading}>
+        <h2 className="text-lg font-semibold mb-2">สรุปแยกประเภทสลาก</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {groups.filter((g) => g.percent !== null || g.count || g.invalid).map((g) => (
+            <div key={g.type} className="border rounded p-4 bg-white">
+              <h3 className="font-semibold mb-2">{g.type}</h3>
+              <p>จำนวน {g.count.toLocaleString("th-TH")} ใบ</p>
+              <p>มูลค่ารางวัลเต็ม: {g.invalid ? "ข้อมูลไม่ครบ" : `${money(g.gross)} บาท`}</p>
+              <p>ยอดจ่ายให้ลูกค้า: {money(g.paid)} บาท</p>
+              {g.percent !== null && <p className="text-sm text-gray-600">หักเมื่อแลกกับกองสลาก {g.percent}%</p>}
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => setCalculated(true)}
+          disabled={loading || !!error || !canCalculate}
+          className="mt-4 bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800 disabled:opacity-50"
+        >
+          คำนวณเงินที่จะได้รับจากกองสลาก
+        </button>
+        <p className="mt-2 text-sm text-gray-600">คำนวณจากมูลค่ารางวัลเต็ม (รางวัลต่อใบ × จำนวนใบ) ตามข้อมูลช่วงวันที่และสาขาที่เลือก</p>
+        {!loading && groups.some((g) => g.invalid || (g.percent === null && g.count > 0)) && (
+          <p role="alert" className="mt-2 text-red-600">ไม่สามารถคำนวณได้ เนื่องจากบางรายการไม่มีมูลค่ารางวัลหรือไม่ทราบประเภทสลาก กรุณาตรวจสอบข้อมูล</p>
+        )}
+        {calculated && !loading && canCalculate && (
+          <div className="mt-4 overflow-x-auto" aria-live="polite">
+            <table className="min-w-full border text-sm">
+              <thead className="bg-gray-100">
+                <tr>
+                  {["ประเภทสลาก", "มูลค่ารางวัลเต็ม (บาท)", "อัตราหัก", "ยอดหัก (บาท)", "รับสุทธิ (บาท)"].map((label) => <th key={label} className="border px-3 py-2">{label}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {groups.filter((g) => g.percent !== null).map((g) => (
+                  <tr key={g.type}>
+                    <td className="border px-3 py-2">{g.type}</td>
+                    <td className="border px-3 py-2 text-right">{money(g.gross)}</td>
+                    <td className="border px-3 py-2 text-right">{g.percent}%</td>
+                    <td className="border px-3 py-2 text-right">{money(g.deduction)}</td>
+                    <td className="border px-3 py-2 text-right font-semibold">{money(g.net)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="mt-3 text-lg font-bold text-green-800">รวมเงินที่จะได้รับ: {money(groups.reduce((sum, g) => sum + g.net, 0))} บาท</p>
+          </div>
+        )}
+      </section>
 
       {/* Per-currency (optional) */}
       {Array.isArray(data?.perCurrency) && data.perCurrency.length > 0 && (

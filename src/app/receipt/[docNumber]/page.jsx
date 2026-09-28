@@ -60,7 +60,7 @@ export default function ReceiptByDocNumberPage() {
       });
 
       const employeeSignatureUrl = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/employee-signature/image?${employeeSignatureParams.toString()}`;
-      const customerSignatureUrl = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/record/${record.docNumber}/signature/image`;
+      const customerSignatureUrl = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/api/record/${record._id}/signature/image`;
 
       try {
         const [employeeSrc, customerSrc] = await Promise.all([

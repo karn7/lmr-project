@@ -2,9 +2,17 @@ import mongoose, { Schema } from "mongoose";
 
 const recordSchema = new Schema({
   docNumber: String, // เช่น B680417001
+  recordedAt: Date,
+  recordedBy: String,
+  batchId: String,
+  batchCashMode: String,
+  batchShiftId: Schema.Types.ObjectId,
+  settlementCurrency: String,
+  docNumberHistory: [{ from: String, to: String, changedAt: Date, changedBy: String, reason: String, batchId: String }],
   customerId: String, // รหัสลูกค้าเชื่อมกับ customer collection (เช่น idNumber)
   customerName: String,
   employee: String,
+  employeeCode: String,
   employeeCode: String,
   branch: String,
   shiftNo: String,

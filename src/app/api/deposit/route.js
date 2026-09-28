@@ -55,6 +55,10 @@ export async function GET(req) {
     { $match: match },
     {
       $facet: {
+        records: [
+          { $sort: { createdAt: 1, _id: 1 } },
+          { $project: { docNumber: 1, createdAt: 1, customerName: 1, branch: 1, employee: 1, receiveMethodNote: 1, total: 1, note: 1, "items.currency": 1, "items.unit": 1, "items.total": 1 } },
+        ],
         summary: [
           { $group: { _id: null, count: { $sum: 1 }, sumTotal: { $sum: "$total" } } },
           { $project: { _id: 0, count: 1, sumTotal: 1 } },
@@ -76,6 +80,7 @@ export async function GET(req) {
       $project: {
         summary: { $ifNull: [{ $arrayElemAt: ["$summary", 0] }, { count: 0, sumTotal: 0 }] },
         byNote: 1,
+        records: 1,
       },
     },
   ];
@@ -91,5 +96,6 @@ export async function GET(req) {
     end,
     summary: result?.summary ?? { count: 0, sumTotal: 0 },
     byNote: result?.byNote ?? [],
+    records: result?.records ?? [],
   });
 }

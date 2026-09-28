@@ -177,12 +177,13 @@ function ExchangePage() {
       });
 
       if (res.ok) {
-        const { docNumber } = await res.json();
+        const { docNumber, recordId } = await res.json();
 
         if (receiveMethod !== "transfer") {
           // ส่งยอดรวม THB เป็น decrease ก่อน
           const payloadTHB = {
             docNumber,
+            recordId,
             employee: session?.user?.name || "",
             shiftNo: currentShift?.shiftNo,
             totalTHB: totalSum,
@@ -200,6 +201,7 @@ function ExchangePage() {
           for (const record of records) {
             const payload = {
               docNumber,
+              recordId,
               employee: session?.user?.name || "",
               shiftNo: currentShift?.shiftNo,
               currency: record.currency,
@@ -217,7 +219,7 @@ function ExchangePage() {
 
         const total = totalSum.toFixed(2);
         window.open(
-          `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/printreceipt?docNumber=${docNumber}&total=${total}`,
+          `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/printreceipt?docNumber=${recordId || docNumber}&total=${total}`,
           "_blank",
           "width=500,height=400"
         );

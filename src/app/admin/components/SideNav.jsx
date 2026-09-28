@@ -29,6 +29,15 @@ function SideNav({ collapsed }) {
         </li>
         <li>
           <Link
+            href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/customers`}
+            className="flex items-center gap-3 my-3 p-3 rounded-lg hover:bg-gray-100"
+          >
+            <span>🪪</span>
+            {!collapsed && <span>ข้อมูลลูกค้า</span>}
+          </Link>
+        </li>
+        <li>
+          <Link
             href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/rateadmin`}
             className="flex items-center gap-3 my-3 p-3 rounded-lg hover:bg-gray-100"
           >
