@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateBatch, planNumbers, cashChanges, calculateTotalCents } from '../lib/batch-records.mjs';
+import { validateBatch, planNumbers, cashChanges, calculateTotalCents, batchNumberingSeries } from '../lib/batch-records.mjs';
 
 const row = { time: '14:30', customerName: 'Test Customer', idType: 'passport', idNumber: 'AB123456', nationality: 'US', currency: 'USD', amount: '1000', rate: '35.125', payMethod: 'cash', receiveMethod: 'cash' };
 const form = { date: '2026-01-12', payType: 'Buying', employeeId: '0123456789abcdef01234567', shiftId: '0123456789abcdef01234568', cashMode: 'adjust-shift', reason: 'Recorded after closing', rows: [row] };
@@ -62,4 +62,37 @@ test('Buying and Selling cash directions respect cash/transfer and settlement cu
   assert.deepEqual(cashChanges({ ...item, payMethod: 'transfer' }, 'Buying'), [{ currency: 'THB', delta: -35000 }]);
   assert.deepEqual(cashChanges({ ...item, receiveMethod: 'transfer' }, 'Selling', 'LAK'), [{ currency: 'LAK', delta: 35000 }]);
   assert.deepEqual(cashChanges({ ...item, payMethod: 'transfer', receiveMethod: 'transfer' }, 'Buying'), []);
+});
+
+
+test('Asawann uses Gregorian date and shared prefix; other branches keep employee series', () => {
+  assert.deepEqual(batchNumberingSeries('Buying', { branch: ' Asawann ', employeeCode: '01' }, '2026-10-04'), { shared: true, dateCode: '261004', counterPrefix: 'B', stem: 'B-261004' });
+  assert.equal(batchNumberingSeries('Selling', { branch: 'asawann', employeeCode: '02' }, '2026-10-04').stem, 'S-261004');
+  assert.equal(batchNumberingSeries('Buying', { branch: 'Main', employeeCode: '01' }, '2026-10-04').stem, 'B-01-261004');
+});
+
+test('shared signed series can reorder existing number slots by transaction time before insertion', () => {
+  const plan = planNumbers([old(2, '09:00'), old(1, '11:00')], [added('10:00'), added('12:00')], stem, { allowTimeReorder: true });
+  assert.deepEqual(plan.map((p) => p.sequence), [1, 2, 3, 4]);
+  assert.equal(plan[0].oldNumber, `${stem}002`);
+  assert.equal(plan[0].docNumber, `${stem}001`);
+  assert.equal(plan[0].timeReordered, true);
+  assert.equal(plan[2].oldNumber, `${stem}001`);
+  assert.equal(plan[2].docNumber, `${stem}003`);
+  assert.equal(new Set(plan.map((p) => p.docNumber)).size, plan.length);
+});
+test('reordering preserves gaps and is deterministic for equal times', () => {
+  const plan = planNumbers([old(5, '09:00'), old(1, '11:00')], [added('10:00')], stem, { allowTimeReorder: true });
+  assert.deepEqual(plan.map((p) => p.sequence), [1, 2, 6]);
+  const ties = planNumbers([old(2, '09:00'), old(1, '09:00')], [added('09:00')], stem, { allowTimeReorder: true });
+  assert.deepEqual(ties.map((p) => p.sequence), [1, 2, 3]);
+  assert.ok(ties.every((p) => !p.timeReordered));
+});
+test('duplicate numbers still block reordering and identify both records', () => {
+  assert.throws(() => planNumbers([old(1, '09:00'), { ...old(1, '11:00'), _id: 'duplicate' }], [added('10:00')], stem, { allowTimeReorder: true }), (error) => {
+    assert.match(error.message, /พบเลขบิลซ้ำจริง/);
+    assert.ok(error.message.includes(`${stem}001`));
+    assert.deepEqual(error.issues.map((r) => r.id), ['1', 'duplicate']);
+    return true;
+  });
 });

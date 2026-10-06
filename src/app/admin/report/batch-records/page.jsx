@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import AdminLayout from '../../components/AdminLayout';
-import { calculateTotalCents } from '../../../../../lib/batch-records.mjs';
+import { calculateTotalCents, batchNumberingSeries } from '../../../../../lib/batch-records.mjs';
 
 const base = process.env.NEXT_PUBLIC_BASE_PATH || '';
 const money = (n) => Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -22,6 +22,7 @@ export default function BatchRecordsPage() {
   const [batchId, setBatchId] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [issues, setIssues] = useState([]);
   const [saved, setSaved] = useState(null);
   const [history, setHistory] = useState([]);
   const [historyError, setHistoryError] = useState('');
@@ -42,11 +43,13 @@ export default function BatchRecordsPage() {
     setForm((f) => ({ ...f, [key]: value, ...(['date', 'employeeId'].includes(key) ? { shiftId: '' } : {}) }));
     setPreview(null);
     setMessage('');
+    setIssues([]);
   }
   function rowChange(index, values) {
     setForm((f) => ({ ...f, rows: f.rows.map((r, i) => i === index ? { ...r, ...values } : r) }));
     setPreview(null);
     setMessage('');
+    setIssues([]);
   }
   async function findCustomer(index) {
     const row = form.rows[index];
@@ -62,12 +65,13 @@ export default function BatchRecordsPage() {
     } catch (e) { setMessage(e.message); } finally { setLookup(null); }
   }
   async function submit(action) {
-    setBusy(true); setMessage('');
+    setBusy(true); setMessage(''); setIssues([]);
+    if (action === 'preview') setPreview(null);
     try {
       const res = await fetch(`${base}/api/record/batch`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, action, snapshot: preview?.snapshot, batchId }) });
       const data = await res.json();
-      if (!res.ok) { if (res.status === 409) setPreview(null); throw new Error(data.message); }
+      if (!res.ok) { setIssues(data.issues || []); if (res.status === 409) setPreview(null); throw new Error(data.message); }
       if (action === 'preview') { setPreview(data); setBatchId(crypto.randomUUID()); }
       else { setSaved(data.batch); setPreview(null); }
     } catch (e) { setMessage(e.message || 'เชื่อมต่อไม่สำเร็จ กรุณาลองอีกครั้ง'); } finally { setBusy(false); }
@@ -86,6 +90,8 @@ export default function BatchRecordsPage() {
     return all;
   }, {});
   const settlementCurrency = options.users.find((u) => u._id === form.employeeId)?.country === 'Laos' ? 'LAK' : 'THB';
+  const employee = options.users.find((u) => u._id === form.employeeId);
+  const numbering = batchNumberingSeries(form.payType, employee || {}, form.date);
   const disabled = busy || !!saved || lookup !== null;
   if (status === 'loading') return <p className="p-6">กำลังโหลด...</p>;
   if (session?.user?.role !== 'admin') return <p className="p-6">เฉพาะผู้ดูแลระบบ <Link href="/login" className="text-blue-700 underline">เข้าสู่ระบบ</Link></p>;
@@ -95,9 +101,15 @@ export default function BatchRecordsPage() {
       <Link href="/admin/report/daily" className="text-blue-700 hover:underline">← กลับรายงานรายการ</Link>
       <div>
         <h1 className="text-2xl font-semibold">เพิ่มบิลย้อนหลังหลายรายการ</h1>
-        <p className="mt-2 text-gray-600">กรอกยอดและเวลาทำรายการจริง (เวลาประเทศไทย) ระบบจะแทรกและเลื่อนเลขบิลภายในประเภท พนักงาน และวันเดียวกัน พร้อมเก็บประวัติเลขเดิม</p>
+        <p className="mt-2 text-gray-600">กรอกยอดและเวลาทำรายการจริง (เวลาประเทศไทย) ระบบจะแทรกและเลื่อนเลขบิลตามชุดตัวนับ พร้อมเก็บประวัติเลขเดิม</p>
       </div>
+      {employee && <p className="rounded border bg-blue-50 p-3 text-sm">{numbering.shared
+        ? `Asawann ใช้เลข ${numbering.stem}001 เป็นต้นไป ตัวนับแยกตามวันและ B/S ร่วมกันทุกพนักงาน สาขา และกะในฐานข้อมูล บิลชุดเดียวกันของสาขาอื่นอาจถูกเลื่อนเลขด้วย`
+        : 'ชุดเลขบิลแยกตามประเภท พนักงาน และวัน เช่น B-รหัสพนักงาน-YYMMDD001'}</p>}
       {message && <p role="alert" className="rounded border border-red-200 bg-red-50 p-3 text-red-800">{message}</p>}
+      {issues.length > 0 && <ul className="list-disc pl-5 text-sm">{issues.map((issue) => <li key={issue.recordId}>
+        <Link href={`/admin/report/daily/dailylist/${issue.recordId}`} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline">เปิดบิล {issue.docNumber}</Link> — {issue.branch || 'ไม่ระบุสาขา'} / {issue.employee || 'ไม่ระบุพนักงาน'}
+      </li>)}</ul>}
       <fieldset disabled={disabled} className="space-y-5 disabled:opacity-70">
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 border rounded p-4 bg-white">
           <label>วันที่ทำรายการ<input type="date" value={form.date} max={localDate()} onChange={(e) => change('date', e.target.value)} className={inputClass} /></label>
@@ -145,10 +157,11 @@ export default function BatchRecordsPage() {
       </fieldset>
       {preview && <section className="border rounded p-4 space-y-3">
         <h2 className="text-xl font-semibold">ตัวอย่างการแทรกบิล</h2>
+        {preview.plan.some((p) => p.timeReordered) && <p className="rounded bg-amber-50 p-3 text-amber-900">เลขบิลเดิมบางรายการไม่เรียงตามเวลาทำรายการ ซึ่งเกิดได้เมื่อยืนยันลายเซ็นคนละเวลา ระบบจัดเลขบิลเดิมตามเวลาทำรายการแล้วจึงแทรกบิลใหม่ โปรดตรวจเลขเดิม → เลขใหม่ในตาราง การเปลี่ยนเลขจะเกิดเมื่อกดยืนยันเท่านั้น</p>}
         <p>เพิ่ม {form.rows.length} บิล · เลื่อนเลขเดิม {preview.plan.filter((p) => !p.isNew && p.oldNumber !== p.docNumber).length} บิล · รวม {money(preview.total)} {preview.settlementCurrency}</p>
         <p className="text-sm text-amber-800">เลขบิลที่เปลี่ยนจะแสดงตามตาราง ใบเสร็จที่เคยพิมพ์หรือส่งออกแล้วจะยังเป็นเลขเดิม กรุณาใช้ประวัติเลขเดิม → เลขใหม่เพื่อตรวจสอบ</p>
-        <div className="overflow-x-auto max-h-96"><table className="w-full text-sm border"><thead className="bg-gray-100"><tr>{['รายการ', 'เวลาทำรายการ', 'เลขเดิม', 'เลขใหม่'].map((h) => <th key={h} className="p-2 text-left border">{h}</th>)}</tr></thead><tbody>
-          {preview.plan.map((p) => <tr key={p.docNumber} className={p.isNew ? 'bg-green-50' : ''}><td className="border p-2">{p.isNew ? `เพิ่มบิลที่ ${p.index + 1}` : p.oldNumber !== p.docNumber ? 'เลื่อนเลข' : 'คงเดิม'}</td><td className="border p-2">{stamp(p.createdAt)}</td><td className="border p-2">{p.oldNumber || '—'}</td><td className="border p-2 font-medium">{p.docNumber}</td></tr>)}
+        <div className="overflow-x-auto max-h-96"><table className="w-full text-sm border"><thead className="bg-gray-100"><tr>{['รายการ', 'เวลาทำรายการ', 'สาขา / พนักงาน', 'เลขเดิม', 'เลขใหม่'].map((h) => <th key={h} className="p-2 text-left border">{h}</th>)}</tr></thead><tbody>
+          {preview.plan.map((p) => <tr key={p.docNumber} className={p.isNew ? 'bg-green-50' : ''}><td className="border p-2">{p.isNew ? `เพิ่มบิลที่ ${p.index + 1}` : p.timeReordered ? 'จัดเรียงตามเวลา' : p.oldNumber !== p.docNumber ? 'เลื่อนเลข' : 'คงเดิม'}</td><td className="border p-2">{stamp(p.createdAt)}</td><td className="border p-2">{p.isNew ? `${employee?.branch} / ${employee?.name}` : `${p.branch || '—'} / ${p.employee || '—'}`}</td><td className="border p-2">{p.oldNumber || '—'}</td><td className="border p-2 font-medium">{p.docNumber}</td></tr>)}
         </tbody></table></div>
         <button type="button" disabled={disabled} onClick={() => submit('save')} className="bg-green-700 text-white rounded px-5 py-2 disabled:opacity-50">{busy ? 'กำลังบันทึก...' : 'ยืนยันบันทึกและเลื่อนเลขบิลตามตัวอย่าง'}</button>
       </section>}

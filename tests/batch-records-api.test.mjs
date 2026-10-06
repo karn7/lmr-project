@@ -57,8 +57,13 @@ async function fixture({ role = 'admin', failAudit = false } = {}) {
     updateOne: async (filter, update, options) => { mutated('shift', options); Object.assign(db.shifts[0], update.$set); },
   };
   const Counter = {
-    find: () => query(db.counters),
-    updateOne: async (filter, update, options) => { mutated('counter', options); db.counters[0].count = Math.max(db.counters[0].count, update.$max.count); },
+    find: (filter) => query(db.counters.filter((c) => c.date === filter.date && c.prefix === filter.prefix)),
+    updateOne: async (filter, update, options) => {
+      mutated('counter', options);
+      let counter = db.counters.find((c) => c.date === filter.date && c.prefix === filter.prefix);
+      if (!counter) { counter = { ...filter, count: 0 }; db.counters.push(counter); }
+      counter.count = Math.max(counter.count, update.$max.count);
+    },
   };
   const Customer = {
     findOne: (filter) => query(db.customers.find((c) => c.idNumber === filter.idNumber) || null),
@@ -181,4 +186,89 @@ test('deletion preserves accounted cash and rejects stale numbers using immutabl
   assert.equal((await f.remove({ recordId: 'old-record', docNumber: 'B-01-200112001' })).status, 409);
   assert.equal((await f.remove({ recordId: 'new-0', docNumber: 'B-01-200112001' })).status, 200);
   assert.deepEqual(f.db().shifts[0].cashBalance, { USD: 500, THB: 10000 });
+});
+
+
+test('Asawann inserts into the shared B series across employees, branches and shifts, preserving signatures', async () => {
+  const f = await fixture();
+  f.db().users[0].branch = 'Asawann';
+  delete f.db().users[0].employeeCode;
+  f.db().shifts[0].branch = 'Asawann';
+  Object.assign(f.db().records[0], { docNumber: 'B-200112001', branch: 'Other branch', employee: 'Other employee', shiftNo: '2', signatureConfirmed: true, customerSignature: { image: 'existing-signature' } });
+  f.db().logs[0].docNumber = 'B-200112001';
+  f.db().notifications[0].docNumber = 'B-200112001';
+  f.db().counters.push({ date: '200112', prefix: 'B', count: 1 }, { date: '200112', prefix: 'S', count: 8 });
+  const untouched = ['S-200112001', 'P-200112001', 'A-200112001', 'B-01-200112001', 'B-200111001'].map((docNumber, i) => ({ _id: `untouched-${i}`, docNumber }));
+  f.db().records.push(...clone(untouched));
+  const preview = await f.call({ ...body, action: 'preview' });
+  assert.equal(preview.status, 200);
+  assert.equal(preview.data.numbering.counterPrefix, 'B');
+  assert.equal(preview.data.plan.length, 2);
+  assert.equal(preview.data.plan[1].branch, 'Other branch');
+  const saved = await f.call({ ...body, action: 'save', snapshot: preview.data.snapshot, batchId });
+  assert.equal(saved.status, 201);
+  assert.equal(f.db().records.find((r) => r._id === 'new-0').docNumber, 'B-200112001');
+  const shifted = f.db().records.find((r) => r._id === 'old-record');
+  assert.equal(shifted.docNumber, 'B-200112002');
+  assert.equal(shifted.signatureConfirmed, true);
+  assert.deepEqual(shifted.customerSignature, { image: 'existing-signature' });
+  assert.equal(f.db().logs[0].docNumber, 'B-200112002');
+  assert.equal(f.db().notifications[0].docNumber, 'B-200112002');
+  assert.equal(f.db().counters.find((c) => c.prefix === 'B').count, 2);
+  assert.equal(f.db().counters.find((c) => c.prefix === 'B-01').count, 1);
+  assert.equal(f.db().counters.find((c) => c.prefix === 'S').count, 8);
+  assert.deepEqual(f.db().records.filter((r) => r._id.startsWith('untouched-')), untouched);
+});
+test('Asawann Selling uses the independent S counter and rejects stale shared-counter previews', async () => {
+  const f = await fixture();
+  f.db().users[0].branch = 'Asawann';
+  f.db().shifts[0].branch = 'Asawann';
+  f.db().counters.push({ date: '200112', prefix: 'S', count: 0 });
+  const input = { ...body, payType: 'Selling' };
+  const preview = await f.call({ ...input, action: 'preview' });
+  assert.equal(preview.data.plan[0].docNumber, 'S-200112001');
+  f.db().counters.find((c) => c.prefix === 'S').count++;
+  assert.equal((await f.call({ ...input, action: 'save', snapshot: preview.data.snapshot, batchId })).status, 409);
+  assert.equal((await f.call({ ...input, action: 'preview' })).status, 409);
+  f.db().records.push({ _id: 'signed-selling', docNumber: 'S-200112001', payType: 'Selling', branch: 'Asawann', employee: 'Employee', createdAt: '2020-01-12T04:00:00.000Z' });
+  const fresh = await f.call({ ...input, action: 'preview' });
+  assert.equal((await f.call({ ...input, action: 'save', snapshot: fresh.data.snapshot, batchId })).status, 201);
+  assert.equal(f.db().records.find((r) => r._id === 'new-0').docNumber, 'S-200112001');
+  assert.equal(f.db().records.find((r) => r._id === 'old-record').docNumber, 'B-01-200112001');
+});
+
+test('Asawann previews and saves signature-order mismatches without editing transaction times or signatures', async () => {
+  const f = await fixture();
+  f.db().users[0].branch = 'Asawann';
+  f.db().shifts[0].branch = 'Asawann';
+  Object.assign(f.db().records[0], { docNumber: 'B-200112001', signatureConfirmed: true, customerSignature: { image: 'signed' } });
+  f.db().records.push({ _id: 'earlier', docNumber: 'B-200112002', employee: 'Other employee', branch: 'Other branch', payType: 'Buying', createdAt: '2020-01-12T02:00:00.000Z' });
+  f.db().logs[0].docNumber = 'B-200112001';
+  f.db().notifications[0].docNumber = 'B-200112002';
+  f.db().counters.push({ date: '200112', prefix: 'B', count: 2 });
+  const before = clone(f.db());
+  const preview = await f.call({ ...body, action: 'preview' });
+  assert.equal(preview.status, 200);
+  assert.deepEqual(f.db(), before);
+  assert.equal(preview.data.plan.filter((p) => p.timeReordered).length, 2);
+  assert.equal((await f.call({ ...body, action: 'save', snapshot: preview.data.snapshot, batchId })).status, 201);
+  const records = f.db().records;
+  assert.equal(records.find((r) => r._id === 'earlier').docNumber, 'B-200112001');
+  assert.equal(records.find((r) => r._id === 'new-0').docNumber, 'B-200112002');
+  assert.equal(records.find((r) => r._id === 'old-record').docNumber, 'B-200112003');
+  assert.equal(records.find((r) => r._id === 'old-record').signatureConfirmed, true);
+  assert.deepEqual(records.find((r) => r._id === 'old-record').customerSignature, { image: 'signed' });
+  assert.equal(records.find((r) => r._id === 'old-record').createdAt, before.records[0].createdAt);
+  assert.equal(f.db().logs[0].docNumber, 'B-200112003');
+  assert.equal(f.db().notifications[0].docNumber, 'B-200112001');
+  assert.equal(f.db().counters.find((c) => c.prefix === 'B').count, 3);
+});
+test('API duplicate diagnostics expose stable record links and do not mutate data', async () => {
+  const f = await fixture();
+  f.db().records.push({ ...clone(f.db().records[0]), _id: 'duplicate' });
+  const result = await f.call({ ...body, action: 'preview' });
+  assert.equal(result.status, 400);
+  assert.match(result.data.message, /B-01-200112001/);
+  assert.deepEqual(result.data.issues.map((r) => r.recordId), ['old-record', 'duplicate']);
+  assert.equal(f.mutations.length, 0);
 });

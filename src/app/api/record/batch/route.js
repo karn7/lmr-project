@@ -4,7 +4,7 @@ import { createHash } from 'crypto';
 import mongoose from 'mongoose';
 import { connectMongoDB } from '../../../../../lib/mongodb';
 import { withRecordNumbering } from '../../../../../lib/record-numbering';
-import { validateBatch, planNumbers, cashChanges } from '../../../../../lib/batch-records.mjs';
+import { validateBatch, planNumbers, cashChanges, batchNumberingSeries } from '../../../../../lib/batch-records.mjs';
 import Record from '../../../../../models/record';
 import RecordBatch from '../../../../../models/recordBatch';
 import Counter from '../../../../../models/counter';
@@ -27,7 +27,7 @@ async function authorize(req) {
 }
 function failure(error) {
   if (error.code === 20 || /Transaction numbers are only allowed/.test(error.message)) return NextResponse.json({ message: 'ฐานข้อมูลต้องรองรับ transaction (MongoDB replica set) จึงจะบันทึกและเลื่อนเลขบิลพร้อมกันได้' }, { status: 503 });
-  return NextResponse.json({ message: error.status ? error.message : 'บันทึกไม่สำเร็จ ไม่มีการบันทึกบางส่วน กรุณาลองอีกครั้ง' }, { status: error.status || 500 });
+  return NextResponse.json({ message: error.status ? error.message : 'บันทึกไม่สำเร็จ ไม่มีการบันทึกบางส่วน กรุณาลองอีกครั้ง', issues: error.status ? error.issues?.map((r) => ({ recordId: r.id, docNumber: r.docNumber, branch: r.branch, employee: r.employee })) : undefined }, { status: error.status || 500 });
 }
 export async function GET(req) {
   try {
@@ -38,7 +38,7 @@ export async function GET(req) {
       const batches = await RecordBatch.find({}).sort({ recordedAt: -1 }).limit(30).lean();
       return NextResponse.json({ batches });
     }
-    const users = await User.find({ employeeCode: { $exists: true, $ne: '' } }).select('name employeeCode branch country').sort({ name: 1 }).lean();
+    const users = await User.find({ $or: [{ employeeCode: { $exists: true, $ne: '' } }, { branch: /^asawann$/i }] }).select('name employeeCode branch country').sort({ name: 1 }).lean();
     const currencies = await Post.distinct('title');
     let shifts = [];
     if (params.get('date') && mongoose.isValidObjectId(params.get('employeeId'))) {
@@ -51,8 +51,12 @@ export async function GET(req) {
 
 async function prepare(input, session = null) {
   const employee = await User.findById(input.employeeId).session(session).lean();
-  if (!employee || !employee.branch || !/^[A-Za-z0-9]+$/.test(employee.employeeCode || '')) problem('ข้อมูลพนักงาน สาขา หรือรหัสพนักงานไม่ครบ');
-  if (await User.countDocuments({ employeeCode: employee.employeeCode }).session(session) !== 1) problem('รหัสพนักงานซ้ำ กรุณาแก้ไขก่อนแทรกบิล');
+  if (!employee || !employee.branch) problem('ข้อมูลพนักงานหรือสาขาไม่ครบ');
+  const series = batchNumberingSeries(input.payType, employee, input.date);
+  if (!series.shared) {
+    if (!/^[A-Za-z0-9]+$/.test(employee.employeeCode || '')) problem('รหัสพนักงานไม่ครบ');
+    if (await User.countDocuments({ employeeCode: employee.employeeCode }).session(session) !== 1) problem('รหัสพนักงานซ้ำ กรุณาแก้ไขก่อนแทรกบิล');
+  }
   const shift = await Shift.findOne({ _id: input.shiftId, employee: employee.name, branch: employee.branch, date: input.date, isDeleted: { $ne: true } }).session(session).lean();
   if (!shift) problem('ไม่พบกะของพนักงานในวันที่เลือก');
   const currencies = await Post.distinct('title').session(session);
@@ -62,17 +66,19 @@ async function prepare(input, session = null) {
     if (!currencies.includes(row.currency)) problem(`ไม่พบสกุลเงิน ${row.currency} ในระบบ`);
     if (new Date(row.createdAt) < new Date(shift.createdAt) || (shift.closedAt && new Date(row.createdAt) > new Date(shift.closedAt))) problem('เวลาทำรายการต้องอยู่ภายในช่วงเปิด–ปิดของกะที่เลือก');
   }
-  const prefix = input.payType === 'Buying' ? 'B' : 'S';
-  const dateCode = input.date.slice(2).replaceAll('-', '');
-  const stem = `${prefix}-${employee.employeeCode}-${dateCode}`;
+  const { dateCode, counterPrefix, stem } = series;
   const existing = await Record.find({ docNumber: { $regex: `^${stem}\\d+$` } }).select('_id docNumber createdAt branch employee payType').sort({ docNumber: 1 }).session(session).lean();
-  if (existing.some((r) => r.branch !== employee.branch || r.employee !== employee.name || r.payType !== input.payType)) problem('ชุดเลขบิลนี้มีรายการต่างสาขาหรือพนักงาน กรุณาตรวจสอบก่อนแทรก');
+  if (existing.some((r) => r.payType !== input.payType || (!series.shared && (r.branch !== employee.branch || r.employee !== employee.name)))) problem('ชุดเลขบิลนี้มีรายการต่างสาขาหรือพนักงาน กรุณาตรวจสอบก่อนแทรก');
   let plan;
-  try { plan = planNumbers(existing, input.rows, stem); } catch (error) { problem(error.message); }
-  const counters = await Counter.find({ date: dateCode, prefix: `${prefix}-${employee.employeeCode}` }).session(session).lean();
+  try { plan = planNumbers(existing, input.rows, stem, { allowTimeReorder: series.shared }); } catch (error) { error.status = 400; throw error; }
+  const counters = await Counter.find({ date: dateCode, prefix: counterPrefix }).session(session).lean();
   if (counters.length > 1) problem('พบตัวนับเลขบิลซ้ำ กรุณาตรวจสอบก่อนแทรก');
+  const lastExistingSequence = Math.max(0, ...plan.filter((p) => !p.isNew).map((p) => Number(p.oldNumber.slice(stem.length))));
+  if (series.shared && (counters[0]?.count || 0) > lastExistingSequence) {
+    problem('มีเลข B/S ที่ออกแล้วแต่ยังไม่พบรายการท้ายชุด อาจกำลังยืนยันลายเซ็นหรือมีบิลถูกลบ กรุณารอหรือกระทบยอดเลขบิลก่อนแทรก', 409);
+  }
   const snapshot = hash({ input, employee, shift, existing, counters });
-  return { employee, shift, plan, snapshot, dateCode, prefix, existing, settlementCurrency };
+  return { employee, shift, plan, snapshot, dateCode, counterPrefix, existing, settlementCurrency, numbering: series };
 }
 
 export async function POST(req) {
@@ -84,7 +90,7 @@ export async function POST(req) {
     await connectMongoDB();
     if (body.action === 'preview') {
       const prepared = await prepare(input);
-      return NextResponse.json({ settlementCurrency: prepared.settlementCurrency, snapshot: prepared.snapshot, plan: prepared.plan, total: input.rows.reduce((s, r) => s + Math.round(r.total * 100), 0) / 100 });
+      return NextResponse.json({ numbering: prepared.numbering, settlementCurrency: prepared.settlementCurrency, snapshot: prepared.snapshot, plan: prepared.plan, total: input.rows.reduce((s, r) => s + Math.round(r.total * 100), 0) / 100 });
     }
     if (body.action !== 'save' || !/^[a-f\d-]{36}$/i.test(body.batchId || '') || !body.snapshot) problem('กรุณาตรวจสอบตัวอย่างก่อนบันทึก');
     const payloadHash = hash(input);
@@ -95,7 +101,7 @@ export async function POST(req) {
         if (previous.payloadHash !== payloadHash || previous.recordedBy !== actor) problem('รหัสชุดบันทึกนี้ถูกใช้งานแล้ว', 409);
         return previous;
       }
-      const { employee, shift, plan, snapshot, dateCode, prefix, settlementCurrency } = await prepare(input, session);
+      const { employee, shift, plan, snapshot, dateCode, counterPrefix, settlementCurrency } = await prepare(input, session);
       if (snapshot !== body.snapshot) problem('ข้อมูลหรือเลขบิลเปลี่ยนหลังเปิดตัวอย่าง กรุณาตรวจสอบตัวอย่างใหม่', 409);
       const recordedAt = new Date();
       const changed = plan.filter((p) => !p.isNew && p.oldNumber !== p.docNumber);
@@ -148,7 +154,7 @@ export async function POST(req) {
         await Shift.updateOne({ _id: shift._id }, { $set: { cashBalance: balance, updatedAt: recordedAt }, $push: { editLogs: { action: 'batch-records', batchId: body.batchId, at: recordedAt, by: actor, reason: input.reason, before: shift.cashBalance, after: balance } } }, { session });
         if (logs.length) await AdjustmentLog.insertMany(logs, { session });
       }
-      await Counter.updateOne({ date: dateCode, prefix: `${prefix}-${employee.employeeCode}` }, { $max: { count: Math.max(...plan.map((p) => p.sequence)) } }, { upsert: true, session });
+      await Counter.updateOne({ date: dateCode, prefix: counterPrefix }, { $max: { count: Math.max(...plan.map((p) => p.sequence)) } }, { upsert: true, session });
       const [audit] = await RecordBatch.create([{ _id: body.batchId, payloadHash, recordedAt, recordedBy: actor, reason: input.reason,
         date: input.date, payType: input.payType, employee: employee.name, branch: employee.branch, cashMode: input.cashMode, shiftId: shift._id,
         inserted: inserted.map((r) => r.toObject()), renumbered: changed,

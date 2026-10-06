@@ -26,6 +26,8 @@ export async function GET(req) {
       },
     };
 
+    if (searchParams.get("branch")) query.branch = searchParams.get("branch");
+
     if (payTypes.length > 0) {
       query.payType = { $in: payTypes };
     }
@@ -43,6 +45,8 @@ export async function GET(req) {
       if (!grouped[date]) grouped[date] = [];
       rec.items.forEach((item) => {
         grouped[date].push({
+          recordId: String(rec._id),
+          itemId: String(item._id),
           docNumber: rec.docNumber,
           currency: item.currency,
           amount: item.amount,
