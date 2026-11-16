@@ -16,7 +16,7 @@ export async function POST(req) {
       ...recordData
     } = await req.json();
     
-    const prefix = recordData.payType === "Selling" ? "S" : recordData.payType === "Buying" ? "B" : "A";
+    const prefix = recordData.payType === "Selling" ? "S" : recordData.payType === "Buying" ? "B" : recordData.payType === "Wholesale" ? "W" : "A";
     const saved = await withRecordNumbering(async (session) => {
       const number = await generateDocNumber(prefix, recordData.employee, employeeCode, session);
       const newRecord = new Record({

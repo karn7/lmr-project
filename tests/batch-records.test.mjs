@@ -96,3 +96,15 @@ test('duplicate numbers still block reordering and identify both records', () =>
     return true;
   });
 });
+
+test('Wholesale keeps its type and uses branch W numbering including Asawann', () => {
+  assert.equal(validateBatch({ ...form, payType: 'Wholesale' }, now).payType, 'Wholesale');
+  for (const branch of ['Main', 'Asawann']) {
+    assert.deepEqual(batchNumberingSeries('Wholesale', { branch, employeeCode: '01' }, form.date), {
+      shared: true, dateCode: '260112', counterPrefix: `W:${branch}`, stem: 'W-260112',
+    });
+  }
+  const item = { currency: 'USD', amount: 100, total: 3500, payMethod: 'cash', receiveMethod: 'cash' };
+  assert.deepEqual(cashChanges(item, 'Wholesale'), [{ currency: 'USD', delta: -100 }, { currency: 'THB', delta: 3500 }]);
+  assert.deepEqual(cashChanges({ ...item, receiveMethod: 'transfer' }, 'Wholesale'), [{ currency: 'THB', delta: 3500 }]);
+});
