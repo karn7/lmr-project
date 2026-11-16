@@ -6,6 +6,13 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { connectMongoDB } from "../../../../../lib/mongodb";
 import DailyStock from "../../../../../models/dailyStocks";
+import { getToken } from "next-auth/jwt";
+
+function isValidDate(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
 
 /**
  * This endpoint deliberately supports **POST** (not DELETE) because
@@ -13,11 +20,20 @@ import DailyStock from "../../../../../models/dailyStocks";
  */
 export async function POST(req) {
   try {
-    const { date, branch } = await req.json();
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    if (token?.role !== "admin") {
+      return NextResponse.json({ success: false, message: "เฉพาะผู้ดูแลระบบเท่านั้น" }, { status: 403 });
+    }
+    const { date, startDate, endDate, branch } = await req.json();
+    // Keep single-date callers compatible; a supplied range must be complete.
+    const hasRange = startDate !== undefined || endDate !== undefined;
+    const from = hasRange ? startDate : date;
+    const to = hasRange ? endDate : date;
 
-    if (!date || !branch) {
+    if (typeof branch !== "string" || !branch.trim() || branch === "ALL" ||
+        !isValidDate(from) || !isValidDate(to) || from > to) {
       return NextResponse.json(
-        { success: false, message: "date and branch are required" },
+        { success: false, message: "กรุณาระบุสาขาและช่วงวันที่ที่ถูกต้อง (YYYY-MM-DD)" },
         { status: 400 }
       );
     }
@@ -26,11 +42,11 @@ export async function POST(req) {
     await connectMongoDB();
 
     // delete matching documents
-    const result = await DailyStock.deleteMany({ date, branch });
+    const result = await DailyStock.deleteMany({ branch, date: { $gte: from, $lte: to } });
 
     if (result.deletedCount === 0) {
       return NextResponse.json(
-        { success: false, message: "No matching stock found" },
+        { success: false, message: "ไม่พบสต๊อกของสาขานี้ในช่วงวันที่ที่เลือก" },
         { status: 404 }
       );
     }

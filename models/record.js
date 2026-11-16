@@ -42,6 +42,10 @@ const recordSchema = new Schema({
   ],
   customerSignature: {
     image: Buffer,
+    addedAt: Date,
+    addedBy: String,
+    source: String,
+    sourceRecordId: Schema.Types.ObjectId,
     contentType: {
       type: String,
       default: "image/png"

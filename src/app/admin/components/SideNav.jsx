@@ -200,6 +200,15 @@ function SideNav({ collapsed }) {
               </li>
               <li>
                 <Link
+                  href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/audit/missing-signatures`}
+                  className="flex items-center gap-3 my-2 p-2 rounded-lg hover:bg-gray-100"
+                >
+                  <span>✍️</span>
+                  {!collapsed && <span>ตรวจสอบลายเซ็นลูกค้า</span>}
+                </Link>
+              </li>
+              <li>
+                <Link
                   href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/audit/deletelogs`}
                   className="flex items-center gap-3 my-2 p-2 rounded-lg hover:bg-gray-100"
                 >
