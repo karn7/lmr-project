@@ -60,6 +60,57 @@ export default function AdminCustomersPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const [nationalities, setNationalities] = useState([]);
+  const [nationality, setNationality] = useState("");
+  const [dateMode, setDateMode] = useState("all");
+  const [auditDate, setAuditDate] = useState("");
+  const [randomLoading, setRandomLoading] = useState(false);
+  const [randomMessage, setRandomMessage] = useState("");
+  const [optionsError, setOptionsError] = useState("");
+
+  useEffect(() => {
+    if (session?.user?.role !== "admin") return;
+    const controller = new AbortController();
+    fetch(`${base}/api/customers/random?options=1`, { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "โหลดสัญชาติไม่สำเร็จ");
+        setNationalities(data.nationalities || []);
+      }).catch((err) => { if (err.name !== "AbortError") setOptionsError(err.message); });
+    return () => controller.abort();
+  }, [session?.user?.role]);
+
+  async function randomCustomer(event) {
+    event.preventDefault();
+    setRandomLoading(true);
+    setError("");
+    setSuccess("");
+    setRandomMessage("");
+    setSelectedId("");
+    setDetail(null);
+    setDetailLoading(false);
+    setPage(1);
+    setCustomers([]);
+    try {
+      const params = new URLSearchParams();
+      if (nationality) params.set("nationality", nationality);
+      if (dateMode === "date") params.set("date", auditDate);
+      const response = await fetch(`${base}/api/customers/random?${params}`, { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "สุ่มลูกค้าไม่สำเร็จ");
+      const scope = `${nationality || "ทุกสัญชาติ"} · ${dateMode === "date" ? `วันที่ทำธุรกรรม ${auditDate}` : "ทุกวัน"}`;
+      setRandomMessage(data.customer ? `สุ่มได้ 1 คน จากลูกค้า ${data.total} คน (${scope})` : `ไม่พบลูกค้าตามเงื่อนไข (${scope})`);
+      if (data.customer) {
+        setCustomers([data.customer]);
+        setSelectedId(data.customer.id);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setRandomLoading(false);
+    }
+  }
+
   if (status === "unauthenticated") redirect(`${base}/login`);
   if (status === "authenticated" && session?.user?.role !== "admin") redirect(`${base}/welcome`);
 
@@ -67,11 +118,13 @@ export default function AdminCustomersPage() {
     event?.preventDefault();
     const keyword = query.trim();
     if (!keyword) return;
+    setRandomMessage("");
     setLoading(true);
     setError("");
     setSuccess("");
     setSelectedId("");
     setDetail(null);
+    setDetailLoading(false);
     try {
       const response = await fetch(`${base}/api/customers?q=${encodeURIComponent(keyword)}&limit=50`, { cache: "no-store" });
       const data = await response.json();
@@ -107,6 +160,7 @@ export default function AdminCustomersPage() {
   }, [selectedId, page]);
 
   function selectCustomer(id) {
+    setDetail(null);
     setSelectedId(id);
     setPage(1);
     setSuccess("");
@@ -159,10 +213,34 @@ export default function AdminCustomersPage() {
                 placeholder="เช่น สมชาย, ใจดี หรือ 1234567890123"
                 className="flex-1 border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <button disabled={loading || !query.trim()} className="bg-blue-600 text-white rounded-lg px-6 py-3 disabled:opacity-50">
+              <button disabled={loading || randomLoading || !query.trim()} className="bg-blue-600 text-white rounded-lg px-6 py-3 disabled:opacity-50">
                 {loading ? "กำลังค้นหา..." : "ค้นหา"}
               </button>
             </form>
+
+            <section className="bg-white border rounded-xl p-5 mb-6">
+              <h2 className="text-xl font-semibold mb-2">สุ่มตรวจลูกค้า</h2>
+              <p className="text-sm text-gray-600 mb-4">สุ่มครั้งละ 1 คน เลือกวันที่ทำธุรกรรมตามเวลาประเทศไทย หรือทุกวันเพื่อสุ่มจากลูกค้าทั้งหมด</p>
+              <form onSubmit={randomCustomer} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+                <label className="text-sm">สัญชาติ
+                  <select value={nationality} onChange={(event) => setNationality(event.target.value)} disabled={randomLoading} className="block w-full border rounded-lg p-3 mt-1">
+                    <option value="">ทุกสัญชาติ</option>
+                    {nationalities.map((code) => <option key={code} value={code}>{new Intl.DisplayNames(["th"], { type: "region" }).of(code)} ({code})</option>)}
+                  </select>
+                </label>
+                <label className="text-sm">ช่วงวันที่
+                  <select value={dateMode} onChange={(event) => setDateMode(event.target.value)} disabled={randomLoading} className="block w-full border rounded-lg p-3 mt-1">
+                    <option value="all">ทุกวัน</option><option value="date">เลือกวันที่ทำธุรกรรม</option>
+                  </select>
+                </label>
+                {dateMode === "date" && <label className="text-sm">วันที่ทำธุรกรรม
+                  <input type="date" required value={auditDate} onChange={(event) => setAuditDate(event.target.value)} disabled={randomLoading} className="block w-full border rounded-lg p-3 mt-1" />
+                </label>}
+                <button type="submit" disabled={randomLoading || loading || deleting || (dateMode === "date" && !auditDate)} className="bg-purple-700 text-white rounded-lg px-6 py-3 disabled:opacity-50">{randomLoading ? "กำลังสุ่ม..." : "สุ่มลูกค้า"}</button>
+              </form>
+              {optionsError && <p role="alert" className="text-red-700 mt-3">{optionsError}</p>}
+              {randomMessage && <p role="status" className="mt-3 text-sm text-gray-700">{randomMessage}</p>}
+            </section>
 
             {error && <div className="mb-5 rounded-lg bg-red-50 text-red-700 p-4">{error}</div>}
             {success && <div className="mb-5 rounded-lg bg-green-50 text-green-700 p-4">{success}</div>}
@@ -180,7 +258,7 @@ export default function AdminCustomersPage() {
                 </div>
               </div>
             )}
-            {!loading && query.trim() && customers.length === 0 && !error && <div className="text-center text-gray-500 py-8">ไม่พบข้อมูลลูกค้า</div>}
+            {!loading && !randomLoading && !randomMessage && query.trim() && customers.length === 0 && !error && <div className="text-center text-gray-500 py-8">ไม่พบข้อมูลลูกค้า</div>}
 
             {detailLoading && <div className="text-center py-8 text-gray-500">กำลังโหลดรายละเอียด...</div>}
             {detail && !detailLoading && (

@@ -103,7 +103,9 @@ export default function BatchRecordsPage() {
         <h1 className="text-2xl font-semibold">เพิ่มบิลย้อนหลังหลายรายการ</h1>
         <p className="mt-2 text-gray-600">กรอกยอดและเวลาทำรายการจริง (เวลาประเทศไทย) ระบบจะแทรกและเลื่อนเลขบิลตามชุดตัวนับ พร้อมเก็บประวัติเลขเดิม</p>
       </div>
-      {employee && <p className="rounded border bg-blue-50 p-3 text-sm">{numbering.shared
+      {employee && <p className="rounded border bg-blue-50 p-3 text-sm">{form.payType === 'Wholesale'
+        ? `ขายส่งใช้เลข ${numbering.stem}001 เป็นต้นไป ตัวนับร่วมกันทุกพนักงานและกะในสาขาที่เลือก แยกตามวัน`
+        : numbering.shared
         ? `Asawann ใช้เลข ${numbering.stem}001 เป็นต้นไป ตัวนับแยกตามวันและ B/S ร่วมกันทุกพนักงาน สาขา และกะในฐานข้อมูล บิลชุดเดียวกันของสาขาอื่นอาจถูกเลื่อนเลขด้วย`
         : 'ชุดเลขบิลแยกตามประเภท พนักงาน และวัน เช่น B-รหัสพนักงาน-YYMMDD001'}</p>}
       {message && <p role="alert" className="rounded border border-red-200 bg-red-50 p-3 text-red-800">{message}</p>}
@@ -113,7 +115,7 @@ export default function BatchRecordsPage() {
       <fieldset disabled={disabled} className="space-y-5 disabled:opacity-70">
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 border rounded p-4 bg-white">
           <label>วันที่ทำรายการ<input type="date" value={form.date} max={localDate()} onChange={(e) => change('date', e.target.value)} className={inputClass} /></label>
-          <label>ประเภท<select value={form.payType} onChange={(e) => change('payType', e.target.value)} className={inputClass}><option>Buying</option><option>Selling</option></select></label>
+          <label>ประเภท<select value={form.payType} onChange={(e) => change('payType', e.target.value)} className={inputClass}><option>Buying</option><option>Selling</option><option value="Wholesale">Wholesale (ขายส่ง)</option></select></label>
           <label>พนักงาน / สาขา<select value={form.employeeId} onChange={(e) => change('employeeId', e.target.value)} className={inputClass}>
             <option value="">เลือกพนักงาน</option>{options.users.map((u) => <option key={u._id} value={u._id}>{u.name} / {u.branch} ({u.employeeCode})</option>)}
           </select></label>

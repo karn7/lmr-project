@@ -67,7 +67,8 @@ async function prepare(input, session = null) {
     if (new Date(row.createdAt) < new Date(shift.createdAt) || (shift.closedAt && new Date(row.createdAt) > new Date(shift.closedAt))) problem('เวลาทำรายการต้องอยู่ภายในช่วงเปิด–ปิดของกะที่เลือก');
   }
   const { dateCode, counterPrefix, stem } = series;
-  const existing = await Record.find({ docNumber: { $regex: `^${stem}\\d+$` } }).select('_id docNumber createdAt branch employee payType').sort({ docNumber: 1 }).session(session).lean();
+  const branchScope = input.payType === 'Wholesale' ? { branch: employee.branch } : {};
+  const existing = await Record.find({ ...branchScope, docNumber: { $regex: `^${stem}\\d+$` } }).select('_id docNumber createdAt branch employee payType').sort({ docNumber: 1 }).session(session).lean();
   if (existing.some((r) => r.payType !== input.payType || (!series.shared && (r.branch !== employee.branch || r.employee !== employee.name)))) problem('ชุดเลขบิลนี้มีรายการต่างสาขาหรือพนักงาน กรุณาตรวจสอบก่อนแทรก');
   let plan;
   try { plan = planNumbers(existing, input.rows, stem, { allowTimeReorder: series.shared }); } catch (error) { error.status = 400; throw error; }
@@ -75,7 +76,7 @@ async function prepare(input, session = null) {
   if (counters.length > 1) problem('พบตัวนับเลขบิลซ้ำ กรุณาตรวจสอบก่อนแทรก');
   const lastExistingSequence = Math.max(0, ...plan.filter((p) => !p.isNew).map((p) => Number(p.oldNumber.slice(stem.length))));
   if (series.shared && (counters[0]?.count || 0) > lastExistingSequence) {
-    problem('มีเลข B/S ที่ออกแล้วแต่ยังไม่พบรายการท้ายชุด อาจกำลังยืนยันลายเซ็นหรือมีบิลถูกลบ กรุณารอหรือกระทบยอดเลขบิลก่อนแทรก', 409);
+    problem('มีเลขบิลที่ออกแล้วแต่ยังไม่พบรายการท้ายชุด อาจกำลังยืนยันลายเซ็นหรือมีบิลถูกลบ กรุณารอหรือกระทบยอดเลขบิลก่อนแทรก', 409);
   }
   const snapshot = hash({ input, employee, shift, existing, counters });
   return { employee, shift, plan, snapshot, dateCode, counterPrefix, existing, settlementCurrency, numbering: series };
@@ -117,7 +118,7 @@ export async function POST(req) {
       // A single update pipeline reads each reference's original value, avoiding cascading renames.
       if (changed.length) {
         for (const model of [AdjustmentLog, Notification]) {
-          await model.updateMany({ docNumber: { $in: changed.map((p) => p.oldNumber) } }, [{ $set: { docNumber: { $switch: {
+          await model.updateMany({ ...(input.payType === 'Wholesale' ? { branch: employee.branch } : {}), docNumber: { $in: changed.map((p) => p.oldNumber) } }, [{ $set: { docNumber: { $switch: {
             branches: changed.map((p) => ({ case: { $eq: ['$docNumber', p.oldNumber] }, then: p.docNumber })), default: '$docNumber',
           } } } }], { session });
         }

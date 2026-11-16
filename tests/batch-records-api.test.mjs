@@ -35,7 +35,7 @@ async function fixture({ role = 'admin', failAudit = false } = {}) {
   const Record = {
     findOne: (filter) => documentQuery(db.records.find((r) => filter._id ? r._id === filter._id : r.docNumber === filter.docNumber), wrap),
     deleteOne: async (filter, options) => { mutated('delete-record', options); db.records = db.records.filter((r) => r._id !== filter._id); },
-    find: (filter) => query(db.records.filter((r) => new RegExp(filter.docNumber.$regex).test(r.docNumber))),
+    find: (filter) => query(db.records.filter((r) => (!filter.branch || r.branch === filter.branch) && new RegExp(filter.docNumber.$regex).test(r.docNumber))),
     bulkWrite: async (operations, options) => {
       mutated('record-update', options);
       for (const { updateOne: op } of operations) {
@@ -271,4 +271,27 @@ test('API duplicate diagnostics expose stable record links and do not mutate dat
   assert.match(result.data.message, /B-01-200112001/);
   assert.deepEqual(result.data.issues.map((r) => r.recordId), ['old-record', 'duplicate']);
   assert.equal(f.mutations.length, 0);
+});
+
+test('Wholesale previews and saves in the W series, adjusts selling cash and reverses on deletion', async () => {
+  const f = await fixture();
+  f.db().records.push({ _id: 'old-wholesale', docNumber: 'W-200112001', employee: 'Other employee', branch: 'Main', payType: 'Wholesale', createdAt: '2020-01-12T04:00:00.000Z' });
+  f.db().counters.push({ date: '200112', prefix: 'W:Main', count: 1 });
+  f.db().records.push({ _id: 'other-branch-wholesale', docNumber: 'W-200112001', employee: 'Another employee', branch: 'Other branch', payType: 'Wholesale', createdAt: '2020-01-12T04:00:00.000Z' });
+  const input = { ...body, payType: 'Wholesale' };
+  const preview = await f.call({ ...input, action: 'preview' });
+  assert.equal(preview.status, 200);
+  assert.equal(f.mutations.length, 0);
+  assert.equal(preview.data.plan[0].docNumber, 'W-200112001');
+  const saved = await f.call({ ...input, action: 'save', snapshot: preview.data.snapshot, batchId });
+  assert.equal(saved.status, 201);
+  assert.equal(saved.data.batch.payType, 'Wholesale');
+  assert.equal(f.db().records.find((r) => r._id === 'other-branch-wholesale').docNumber, 'W-200112001');
+  assert.equal(f.db().records.find((r) => r._id === 'new-0').payType, 'Wholesale');
+  assert.equal(f.db().records.find((r) => r._id === 'old-wholesale').docNumber, 'W-200112002');
+  assert.equal(f.db().records.find((r) => r._id === 'old-record').docNumber, 'B-01-200112001');
+  assert.equal(f.db().counters.find((c) => c.prefix === 'W:Main').count, 2);
+  assert.deepEqual(f.db().shifts[0].cashBalance, { USD: 400, THB: 13500 });
+  assert.equal((await f.remove({ recordId: 'new-0', docNumber: 'W-200112001' })).status, 200);
+  assert.deepEqual(f.db().shifts[0].cashBalance, { USD: 500, THB: 10000 });
 });
