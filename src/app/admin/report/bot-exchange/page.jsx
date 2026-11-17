@@ -215,7 +215,7 @@ export default function BotExchangeReportPage() {
           >
             {/* ปรับ value ให้ตรงกับค่าที่คุณใช้จริงใน record.payType */}
             <option value="Buying">ซื้อ (Buying)</option>
-            <option value="Selling">ขาย (Selling)</option>
+            <option value="Selling">ขาย / ขายส่ง (Selling / Wholesale)</option>
           </select>
         </div>
 

@@ -14,7 +14,7 @@ export async function POST(req) {
     };
 
     if (payType) {
-      query.payType = payType; // เช่น "P" หรือ "NP" หรือ "Buying/Selling" ตามที่ใช้จริง
+      query.payType = payType === "Selling" ? { $in: ["Selling", "Wholesale"] } : payType;
     }
 
     // ถ้ามีการเลือกสาขา (ไม่ใช่ค่าว่าง) ให้ filter ตาม branch
