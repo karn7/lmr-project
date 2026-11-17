@@ -22,7 +22,7 @@ export async function POST(req) {
       query.branch = branch;
     }
 
-    const records = await Record.find(query).lean();
+    const records = await Record.find(query).sort({ date: 1, createdAt: 1, _id: 1 }).lean();
 
     // join customer ทีละรายการ
     const result = await Promise.all(
