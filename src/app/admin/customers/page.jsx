@@ -57,6 +57,8 @@ export default function AdminCustomersPage() {
   const [loading, setLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editForm, setEditForm] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -86,6 +88,7 @@ export default function AdminCustomersPage() {
     setError("");
     setSuccess("");
     setRandomMessage("");
+    setEditForm(null);
     setSelectedId("");
     setDetail(null);
     setDetailLoading(false);
@@ -122,6 +125,7 @@ export default function AdminCustomersPage() {
     setLoading(true);
     setError("");
     setSuccess("");
+    setEditForm(null);
     setSelectedId("");
     setDetail(null);
     setDetailLoading(false);
@@ -160,10 +164,54 @@ export default function AdminCustomersPage() {
   }, [selectedId, page]);
 
   function selectCustomer(id) {
+    if (id === selectedId) return;
+    setEditForm(null);
     setDetail(null);
     setSelectedId(id);
     setPage(1);
     setSuccess("");
+  }
+
+  function startEditing() {
+    const customer = detail.customer;
+    setEditForm({
+      ...Object.fromEntries(["fullName", "nationality", "idType", "idNumber", "branch", "notes", "customerStatus", "riskStatus"].map((key) => [key, customer[key] || ""])),
+      isActive: customer.isActive ?? true,
+      documentExpiresAt: customer.documentExpiresAt?.slice(0, 10) || "",
+      dataCollectedAt: customer.dataCollectedAt?.slice(0, 10) || "",
+      contactInfo: customer.contactInfo && typeof customer.contactInfo === "object" && !Array.isArray(customer.contactInfo)
+        ? { ...customer.contactInfo } : customer.contactInfo || { phone: "", email: "", address: "" },
+    });
+    setError("");
+    setSuccess("");
+  }
+
+  async function saveCustomer(event) {
+    event.preventDefault();
+    const customerId = detail.customer.id;
+    setSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      const payload = { ...editForm };
+      for (const field of ["documentExpiresAt", "dataCollectedAt"]) {
+        if (payload[field] === (detail.customer[field]?.slice(0, 10) || "")) delete payload[field];
+        else payload[field] = payload[field] || null;
+      }
+      const response = await fetch(`${base}/api/customers/${customerId}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "บันทึกข้อมูลลูกค้าไม่สำเร็จ");
+      setDetail((current) => ({ ...current, customer: data.customer }));
+      setCustomers((current) => current.map((item) => item.id === customerId ? data.customer : item));
+      setEditForm(null);
+      setSuccess(data.message);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function deleteCustomer() {
@@ -186,6 +234,7 @@ export default function AdminCustomersPage() {
       if (!response.ok) throw new Error(data.message || "ลบข้อมูลลูกค้าไม่สำเร็จ");
 
       setCustomers((current) => current.filter((item) => item.id !== customer.id));
+      setEditForm(null);
       setSelectedId("");
       setDetail(null);
       setPage(1);
@@ -213,7 +262,7 @@ export default function AdminCustomersPage() {
                 placeholder="เช่น สมชาย, ใจดี หรือ 1234567890123"
                 className="flex-1 border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <button disabled={loading || randomLoading || !query.trim()} className="bg-blue-600 text-white rounded-lg px-6 py-3 disabled:opacity-50">
+              <button disabled={saving || loading || randomLoading || !query.trim()} className="bg-blue-600 text-white rounded-lg px-6 py-3 disabled:opacity-50">
                 {loading ? "กำลังค้นหา..." : "ค้นหา"}
               </button>
             </form>
@@ -236,7 +285,7 @@ export default function AdminCustomersPage() {
                 {dateMode === "date" && <label className="text-sm">วันที่ทำธุรกรรม
                   <input type="date" required value={auditDate} onChange={(event) => setAuditDate(event.target.value)} disabled={randomLoading} className="block w-full border rounded-lg p-3 mt-1" />
                 </label>}
-                <button type="submit" disabled={randomLoading || loading || deleting || (dateMode === "date" && !auditDate)} className="bg-purple-700 text-white rounded-lg px-6 py-3 disabled:opacity-50">{randomLoading ? "กำลังสุ่ม..." : "สุ่มลูกค้า"}</button>
+                <button type="submit" disabled={saving || randomLoading || loading || deleting || (dateMode === "date" && !auditDate)} className="bg-purple-700 text-white rounded-lg px-6 py-3 disabled:opacity-50">{randomLoading ? "กำลังสุ่ม..." : "สุ่มลูกค้า"}</button>
               </form>
               {optionsError && <p role="alert" className="text-red-700 mt-3">{optionsError}</p>}
               {randomMessage && <p role="status" className="mt-3 text-sm text-gray-700">{randomMessage}</p>}
@@ -250,7 +299,7 @@ export default function AdminCustomersPage() {
                 <div className="px-4 py-3 bg-gray-50 font-semibold">ผลการค้นหา ({customers.length} รายการ)</div>
                 <div className="divide-y">
                   {customers.map((customer) => (
-                    <button key={customer.id} onClick={() => selectCustomer(customer.id)} className={`w-full text-left p-4 hover:bg-blue-50 ${selectedId === customer.id ? "bg-blue-50 ring-1 ring-inset ring-blue-300" : ""}`}>
+                    <button key={customer.id} disabled={saving} onClick={() => selectCustomer(customer.id)} className={`w-full text-left p-4 hover:bg-blue-50 ${selectedId === customer.id ? "bg-blue-50 ring-1 ring-inset ring-blue-300" : ""}`}>
                       <div className="font-semibold text-gray-900">{customer.fullName}</div>
                       <div className="text-sm text-gray-600 mt-1">{customer.idType === "thai_id" ? "บัตรประชาชน" : "พาสปอร์ต"}: {customer.idNumber} · สัญชาติ {customer.nationality}</div>
                     </button>
@@ -266,15 +315,32 @@ export default function AdminCustomersPage() {
                 <section className="bg-white border rounded-xl p-5">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                     <h2 className="text-xl font-semibold">ข้อมูลส่วนตัว</h2>
-                    <button
-                      type="button"
-                      onClick={deleteCustomer}
-                      disabled={deleting}
-                      className="self-start rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
-                    >
-                      {deleting ? "กำลังลบ..." : "ลบข้อมูลลูกค้า"}
-                    </button>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={startEditing} disabled={deleting || saving || !!editForm} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">แก้ไขข้อมูล</button>
+                      <button
+                        type="button"
+                        onClick={deleteCustomer}
+                        disabled={deleting || saving || !!editForm}
+                        className="self-start rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                      >
+                        {deleting ? "กำลังลบ..." : "ลบข้อมูลลูกค้า"}
+                      </button>
+                    </div>
                   </div>
+                  {editForm && <form onSubmit={saveCustomer} className="mb-6 border rounded-lg p-4 bg-blue-50 space-y-4">
+                    <fieldset disabled={saving} className="grid md:grid-cols-2 gap-4">
+                      <legend className="font-semibold mb-3">แก้ไขข้อมูลลูกค้า</legend>
+                      {[["fullName", "ชื่อ–นามสกุล", 200], ["idNumber", "เลขเอกสาร", 64], ["nationality", "สัญชาติ (รหัส 2 ตัว เช่น TH)", 2], ["branch", "สาขา"], ["customerStatus", "สถานะลูกค้า"], ["riskStatus", "ระดับความเสี่ยง"]].map(([key, label, maxLength]) => (
+                        <label key={key} className="text-sm">{label}<input required={["fullName", "idNumber", "nationality"].includes(key)} maxLength={maxLength} minLength={key === "idNumber" ? 4 : key === "nationality" ? 2 : undefined} pattern={key === "nationality" ? "[A-Za-z]{2}" : undefined} value={editForm[key]} onChange={(event) => setEditForm({ ...editForm, [key]: event.target.value })} className="block w-full border rounded p-2 mt-1" /></label>
+                      ))}
+                      <label className="text-sm">ประเภทเอกสาร<select value={editForm.idType} onChange={(event) => setEditForm({ ...editForm, idType: event.target.value })} className="block w-full border rounded p-2 mt-1"><option value="thai_id">บัตรประชาชน</option><option value="passport">พาสปอร์ต</option></select></label>
+                      <label className="text-sm">สถานะ<select value={String(editForm.isActive)} onChange={(event) => setEditForm({ ...editForm, isActive: event.target.value === "true" })} className="block w-full border rounded p-2 mt-1"><option value="true">ใช้งาน</option><option value="false">ระงับ</option></select></label>
+                      {[["documentExpiresAt", "วันหมดอายุเอกสาร"], ["dataCollectedAt", "วันที่เก็บข้อมูล"]].map(([key, label]) => <label key={key} className="text-sm">{label}<input type="date" value={editForm[key]} onChange={(event) => setEditForm({ ...editForm, [key]: event.target.value })} className="block w-full border rounded p-2 mt-1" /></label>)}
+                      <label className="text-sm md:col-span-2">หมายเหตุ<textarea maxLength={1000} value={editForm.notes} onChange={(event) => setEditForm({ ...editForm, notes: event.target.value })} className="block w-full border rounded p-2 mt-1" /></label>
+                      {typeof editForm.contactInfo === "string" ? <label className="text-sm md:col-span-2">ข้อมูลติดต่อ<textarea value={editForm.contactInfo} onChange={(event) => setEditForm({ ...editForm, contactInfo: event.target.value })} className="block w-full border rounded p-2 mt-1" /></label> : Object.entries({ phone: "", email: "", address: "", ...editForm.contactInfo }).filter(([, value]) => value === null || typeof value !== "object").map(([key, value]) => <label key={key} className="text-sm">{({ phone: "เบอร์โทรศัพท์", email: "อีเมล", address: "ที่อยู่", phoneNumber: "เบอร์โทรศัพท์", mobile: "โทรศัพท์มือถือ", line: "LINE", lineId: "LINE ID" })[key] || key}<input value={value ?? ""} onChange={(event) => setEditForm({ ...editForm, contactInfo: { ...editForm.contactInfo, [key]: event.target.value } })} className="block w-full border rounded p-2 mt-1" /></label>)}
+                    </fieldset>
+                    <div className="flex gap-2"><button type="submit" disabled={saving} className="rounded-lg bg-blue-600 text-white px-4 py-2 disabled:opacity-50">{saving ? "กำลังบันทึก..." : "บันทึก"}</button><button type="button" disabled={saving} onClick={() => { setEditForm(null); setError(""); }} className="rounded-lg border bg-white px-4 py-2 disabled:opacity-50">ยกเลิก</button></div>
+                  </form>}
                   <dl className="grid md:grid-cols-3 gap-4 text-sm">
                     <div><dt className="text-gray-500">ชื่อ–นามสกุล</dt><dd className="font-medium mt-1">{detail.customer.fullName}</dd></div>
                     <div><dt className="text-gray-500">ประเภทเอกสาร</dt><dd className="font-medium mt-1">{detail.customer.idType === "thai_id" ? "บัตรประชาชน" : "พาสปอร์ต"}</dd></div>
@@ -333,7 +399,7 @@ export default function AdminCustomersPage() {
                       </tbody>
                     </table>
                   </div>
-                  {detail.pagination.pages > 1 && <div className="p-4 border-t flex justify-between items-center"><button onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page === 1} className="border rounded px-4 py-2 disabled:opacity-40">ก่อนหน้า</button><span>หน้า {page} จาก {detail.pagination.pages}</span><button onClick={() => setPage((value) => Math.min(detail.pagination.pages, value + 1))} disabled={page === detail.pagination.pages} className="border rounded px-4 py-2 disabled:opacity-40">ถัดไป</button></div>}
+                  {detail.pagination.pages > 1 && <div className="p-4 border-t flex justify-between items-center"><button onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={saving || !!editForm || page === 1} className="border rounded px-4 py-2 disabled:opacity-40">ก่อนหน้า</button><span>หน้า {page} จาก {detail.pagination.pages}</span><button onClick={() => setPage((value) => Math.min(detail.pagination.pages, value + 1))} disabled={saving || !!editForm || page === detail.pagination.pages} className="border rounded px-4 py-2 disabled:opacity-40">ถัดไป</button></div>}
                 </section>
               </div>
             )}
