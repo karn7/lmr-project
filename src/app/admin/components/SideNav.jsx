@@ -29,6 +29,16 @@ function SideNav({ collapsed }) {
         </li>
         <li>
           <Link
+            href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/attendance`}
+            title="ปฏิทินลงเวลาพนักงาน"
+            className="flex items-center gap-3 my-3 p-3 rounded-lg hover:bg-gray-100"
+          >
+            <span>📅</span>
+            {!collapsed && <span>ลงเวลาพนักงาน</span>}
+          </Link>
+        </li>
+        <li>
+          <Link
             href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/admin/customers`}
             className="flex items-center gap-3 my-3 p-3 rounded-lg hover:bg-gray-100"
           >

@@ -1,5 +1,21 @@
 # Backdated batch records
 
+## Attendance calendar
+
+Open **ลงเวลาพนักงาน** (`/admin/attendance`) as an admin. Select a month and either all employees or one employee. Multiple records per day are retained; missing checkouts and overnight checkouts are displayed explicitly. Durations are elapsed time without break deductions, and missing records do not imply absence.
+
+Check-ins after 10:00 Bangkok time and checkouts before 19:00 on the record's work day are red with warning text. Exactly 10:00 and 19:00 are allowed; next-day checkouts are not early. **บันทึกรูปทั้งเดือน (PNG)** downloads a complete calendar with the selected month, employee name (or all employees), all records and warnings, independent of viewport size. Exceptionally large images prompt selection of a single employee instead of clipping records.
+
+The read-only API (`/api/admin/attendance`) uses the existing MongoDB connection and the `attendances` collection (Mongoose model `Attendance`). Source `date` must be a zero-padded Gregorian `YYYY-MM-DD` string. The employee filter uses exact `employee` values; options come from attendance history, including employees with no records in the selected month. Displayed timestamps use `Asia/Bangkok`. National IDs, card data and employee emails are excluded from responses.
+
+Run calendar and mocked API tests without MongoDB:
+
+```sh
+node --experimental-vm-modules --test tests/attendance*.test.mjs
+```
+
+These tests cover month boundaries, leap years, Bangkok dates, overnight durations, authorization and projection. Verify with a real admin session against the source database to confirm the collection and date format before deployment.
+
 Run validation, numbering, cash-direction and API regression tests without accessing MongoDB:
 
 ```sh

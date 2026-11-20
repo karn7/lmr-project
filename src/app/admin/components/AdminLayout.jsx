@@ -65,7 +65,7 @@ export default function AdminLayout({ children }) {
       </div>
 
       {/* Content */}
-      <div className="w-full md:flex-1 p-4">{children}</div>
+      <div className="w-full min-w-0 md:flex-1 p-4">{children}</div>
     </div>
   );
 }
